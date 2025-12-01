@@ -1,0 +1,25 @@
+body {
+  margin: 0;
+  font-family: "Inter", "Segoe UI", sans-serif;
+  background-color: #f5f5f5;
+}
+
+.ant-card {
+  background: #fff;
+  transition: all 0.2s ease;
+}
+
+.ant-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+}
+
+.ant-input,
+.ant-input-password {
+  border-radius: 8px;
+}
+
+.ant-btn {
+  border-radius: 8px;
+  font-weight: 500;
+}

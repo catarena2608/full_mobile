@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>SocketIO Direct Token Test</title>
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+</head>
+<body>
+
+<h2>🔐 Test Tự Sinh JWT Chuẩn & SocketIO</h2>
+
+<div>
+  <label>Email:</label>
+  <input id="email" type="text" placeholder="email@example.com">
+</div>
+
+<div>
+  <label>Password:</label>
+  <input id="password" type="password" placeholder="password">
+</div>
+
+<button onclick="spawnToken()">Login → Generate Token → Connect</button>
+
+<hr>
+
+<h3>📡 Realtime Log:</h3>
+<pre id="log" style="background:#222;color:#0f0;padding:10px;min-height:200px"></pre>
+
+<script>
+  let token = null;
+  let socket = null;
+
+  const SECRET = "e3b0c44298fc1c149afbf4X9@2$k8G#d!0fLzP7qR3tM1xS5aNc8996fb92427ae41e4649b934ca495991b7852b855DayLaChuoiTuCheThoi";
+
+  function log(msg) {
+    document.getElementById("log").textContent += msg + "\n";
+  }
+
+  // ---- Base64 URL ----
+  function base64url(obj) {
+    return btoa(JSON.stringify(obj))
+      .replace(/=/g,"").replace(/\+/g,"-").replace(/\//g,"_");
+  }
+
+  // ---- Create HS256 signature ----
+  async function hmacSHA256(secret, message) {
+    const encoder = new TextEncoder();
+    const key = await crypto.subtle.importKey(
+      "raw",
+      encoder.encode(secret),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"]
+    );
+    const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(message));
+    return btoa(String.fromCharCode(...new Uint8Array(signature)))
+      .replace(/=/g,"").replace(/\+/g,"-").replace(/\//g,"_");
+  }
+
+  // ---- Sign JWT identical to backend ----
+  async function signJWT(payload) {
+    const header = { alg: "HS256", typ: "JWT" };
+
+    const h = base64url(header);
+    const p = base64url(payload);
+    const sig = await hmacSHA256(SECRET, `${h}.${p}`);
+
+    return `${h}.${p}.${sig}`;
+  }
+
+  // =====================================================
+  // 🚀 MAIN FUNCTION: LOGIN → SIGN JWT → CONNECT SOCKETIO
+  // =====================================================
+  async function spawnToken() {
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value.trim();
+
+    if (!email || !password) return alert("Nhập email + password!");
+
+    log("🔄 Logging in...");
+
+    // ---- Login để lấy user real ID ----
+    const res = await fetch("http://localhost:3000/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ email, password })
+    });
+
+    const data = await res.json();
+    console.log("Login response:", data);
+
+    if (!res.ok) {
+      log("❌ Login failed: " + JSON.stringify(data));
+      return;
+    }
+
+    const userId = data.user.id;
+    const userEmail = data.user.email;
+
+    log(`🔍 Lấy userID: ${userId}`);
+
+    // ---- Sinh JWT đúng format backend ----
+    const now = Math.floor(Date.now() / 1000);
+    token = await signJWT({
+      id: userId,
+      email: userEmail,
+      iat: now,
+      exp: now + 86400
+    });
+
+    log("✅ JWT generated!");
+    console.log(token);
+
+    connectSocket();
+  }
+
+  // =====================================================
+  // SOCKET CONNECT
+  // =====================================================
+  function connectSocket() {
+    if (!token) return alert("Không có token");
+
+    log("🔌 Connecting to SocketIO...");
+
+    socket = io("http://localhost:6001", {
+      transports: ["websocket"],
+      auth: { token }
+    });
+
+    socket.on("connect", () => {
+      log("✅ CONNECTED with ID: " + socket.id);
+    });
+
+    socket.on("connect_error", (err) => {
+      log("❌ Connect error: " + err.message);
+    });
+
+    socket.on("notify", (payload) => {
+      log("📥 NOTIFY:\n" + JSON.stringify(payload, null, 2));
+    });
+
+    socket.on("disconnect", () => {
+      log("❌ DISCONNECTED");
+    });
+  }
+</script>
+
+</body>
+</html>

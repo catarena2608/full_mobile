@@ -1,0 +1,29 @@
+.upload-post-container {
+  max-width: 600px;
+  margin: 30px auto;
+  background: #fff;
+  padding: 24px;
+  border-radius: 16px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+
+  .ant-tabs-nav {
+    margin-bottom: 24px;
+  }
+
+  .upload-form {
+    .ant-form-item {
+      margin-bottom: 18px;
+    }
+
+    .ant-upload-list-picture {
+      .ant-upload-list-item {
+        border-radius: 8px;
+      }
+    }
+
+    .ant-btn {
+      height: 40px;
+      border-radius: 8px;
+    }
+  }
+}

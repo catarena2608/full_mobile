@@ -1,0 +1,457 @@
+[
+  {
+    "_id": "e90f3219-0750-414c-97ad-8703b4bdd086",
+    "user_name": "thanh_nha_2k5",
+    "name": "Trần Thanh Nhã",
+    "email": "thanhnhalovecat@gm.com",
+    "password": "tranthanhnha",
+    "avatar": "https://banobagi.vn/wp-content/uploads/2025/06/Anh-Avatar-Dep-Cho-Con-Gai-8.jpg?v=1750299137",
+    "coverImage": "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&q=80&w=1200",
+    "numPosts": 14,
+    "numFollowed": 213,
+    "numFollowing": 12,
+    "tags": [
+      "Food Reviewer",
+      "Blogger",
+      "Healthy Living"
+    ],
+    "link": [
+      "abc.com"
+    ],
+    "preference": {
+      "allergy": [
+        "Đậu phộng",
+        "Mè"
+      ],
+      "illness": [
+        "Hen suyễn"
+      ],
+      "diet": [
+        "Bình thường"
+      ]
+    }
+  },
+  {
+    "_id": "64be09bf-c3c9-4a2a-9c18-c65fd7c951d6",
+    "user_name": "sandraa_123",
+    "name": "Sandra Sanchez",
+    "email": "sandralovekata@gm.com",
+    "password": "spainkata",
+    "avatar": "https://www.aboutdaedo.com/wp-content/uploads/2024/01/8-TOKIO-2020-by-Paco-Lozano.jpg",
+    "coverImage": "https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?auto=format&fit=crop&q=80&w=1200",
+    "numPosts": 14,
+    "numFollowed": 213,
+    "numFollowing": 12,
+    "tags": [
+      "Home Chef",
+      "Foodie"
+    ],
+    "link": [],
+    "preference": {
+      "allergy": [],
+      "illness": [],
+      "diet": [
+        "High-protein"
+      ]
+    }
+  },
+  {
+    "_id": "e18b62fc-3250-424b-917a-c1266b3d6c6d",
+    "user_name": "Tai_solution_architecture",
+    "name": "Đoàn Văn Tài",
+    "email": "trummay@gm.com",
+    "password": "trummay",
+    "avatar": "https://img.freepik.com/premium-vector/vector-cute-cloud-illustration_581871-48.jpg",
+    "coverImage": "https://images.unsplash.com/photo-1467003909585-2f8a72700288?auto=format&fit=crop&q=80&w=1200",
+    "numPosts": 14,
+    "numFollowed": 213,
+    "numFollowing": 12,
+    "tags": [
+      "Street Food Hunter",
+      "Recipe Creator"
+    ],
+    "link": [],
+    "preference": {
+      "allergy": [],
+      "illness": [],
+      "diet": [
+        "Bình thường"
+      ]
+    }
+  },
+  {
+    "_id": "bc7439f1-4f41-4b67-8fb7-e50df5bd1576",
+    "user_name": "Min_min",
+    "name": "Chu Văn Minh",
+    "email": "wellsthomas@yahoo.com",
+    "password": "+3RRom*p&0",
+    "avatar": "https://www.shutterstock.com/image-vector/cool-beard-man-vector-logo-600nw-1719020434.jpg",
+    "coverImage": "https://images.unsplash.com/photo-1514516430037-7d5fcd82d77c?auto=format&fit=crop&q=80&w=1200",
+    "numPosts": 14,
+    "numFollowed": 213,
+    "numFollowing": 12,
+    "tags": [
+      "Food Photographer"
+    ],
+    "link": [],
+    "preference": {
+      "allergy": [],
+      "illness": [
+        "Cao huyết áp"
+      ],
+      "diet": [
+        "Bình thường"
+      ]
+    }
+  },
+  {
+    "_id": "0c8a2d4c-7a5c-479c-904c-5df19191d718",
+    "user_name": "Kcaitlyn",
+    "name": "Kaitlyn Collins",
+    "email": "cgordon@gmail.com",
+    "password": "T)%U9Ek*@!",
+    "avatar": "https://img.freepik.com/premium-vector/young-man-avatar-character-due-avatar-man-vector-icon-cartoon-illustration_1186924-4438.jpg?semt=ais_hybrid&w=740&q=80",
+    "coverImage": "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&q=80&w=1200",
+    "numPosts": 14,
+    "numFollowed": 213,
+    "numFollowing": 12,
+    "tags": [
+      "Healthy Living",
+      "Vegan Lifestyle"
+    ],
+    "link": [],
+    "preference": {
+      "allergy": [
+        "Sữa"
+      ],
+      "illness": [],
+      "diet": [
+        "Thuần chay"
+      ]
+    }
+  },
+  {
+    "_id": "638c64cf-05ac-498b-b507-393d5cad281e",
+    "user_name": "Mary21",
+    "name": "Marie Rogers",
+    "email": "lbrowning@hotmail.com",
+    "password": "W5isBrsk&e",
+    "avatar": "https://images.unsplash.com/photo-1580483046931-aaba29b81601?auto=format&fit=crop&q=60&w=600",
+    "coverImage": "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&q=80&w=1200",
+    "numPosts": 14,
+    "numFollowed": 213,
+    "numFollowing": 12,
+    "tags": [
+      "Recipe Creator",
+      "Nutrition Enthusiast"
+    ],
+    "link": [],
+    "preference": {
+      "allergy": [],
+      "illness": [
+        "Mỡ máu"
+      ],
+      "diet": [
+        "Bình thường"
+      ]
+    }
+  },
+  {
+    "_id": "6eb23865-81a0-4f61-af35-952d2468c072",
+    "user_name": "Janet_12",
+    "name": "Jane Reedan",
+    "email": "castillocarl@george-mcgee.info",
+    "password": "@1ZLJsp(mT",
+    "avatar": "https://images.unsplash.com/photo-1604004555489-723a93d6ce74?auto=format&fit=crop&q=60&w=600",
+    "coverImage": "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&q=80&w=1200",
+    "numPosts": 14,
+    "numFollowed": 213,
+    "numFollowing": 12,
+    "tags": [
+      "Blogger",
+      "Healthy Living"
+    ],
+    "link": [],
+    "preference": {
+      "allergy": [],
+      "illness": [],
+      "diet": [
+        "Giảm cân"
+      ]
+    }
+  },
+  {
+    "_id": "8205a4f5-75fc-4629-a808-2e9579b0bd5e",
+    "user_name": "J_Reedann",
+    "name": "Jake Reedan",
+    "email": "fharrison@hotmail.com",
+    "password": "B%9j5LEt9W",
+    "avatar": "https://plus.unsplash.com/premium_photo-1672239496290-5061cfee7ebb?auto=format&fit=crop&q=60&w=600",
+    "coverImage": "https://images.unsplash.com/photo-1525351484163-7529414344d8?auto=format&fit=crop&q=80&w=1200",
+    "numPosts": 14,
+    "numFollowed": 213,
+    "numFollowing": 12,
+    "tags": [
+      "Street Food Hunter"
+    ],
+    "link": [],
+    "preference": {
+      "allergy": [
+        "Ngũ cốc chứa gluten"
+      ],
+      "illness": [],
+      "diet": [
+        "Bình thường"
+      ]
+    }
+  },
+  {
+    "_id": "c5acec7e-f179-4e9c-94fe-c4bf85cac5ff",
+    "user_name": "Kathleen_best",
+    "name": "Kathleen Smith",
+    "email": "misty10@smith-garrett.com",
+    "password": "#csALYczj7",
+    "avatar": "https://images.unsplash.com/photo-1600486913747-55e5470d6f40?auto=format&fit=crop&q=60&w=600",
+    "coverImage": "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&q=80&w=1200",
+    "numPosts": 14,
+    "numFollowed": 213,
+    "numFollowing": 12,
+    "tags": [
+      "Vegan Lifestyle"
+    ],
+    "link": [],
+    "preference": {
+      "allergy": [],
+      "illness": [
+        "Gout"
+      ],
+      "diet": [
+        "Chay (có ăn trứng, sữa)"
+      ]
+    }
+  },
+  {
+    "_id": "29aac163-e815-49ab-92ed-c6698224c659",
+    "user_name": "HerLoriEl",
+    "name": "Lori Hernandez",
+    "email": "bennettraymond@elliott-hooper.com",
+    "password": "$n9BECw5o4",
+    "avatar": "https://plus.unsplash.com/premium_photo-1661284937039-4d00e054d9cc?auto=format&fit=crop&q=60&w=600",
+    "coverImage": "https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&q=80&w=1200",
+    "numPosts": 14,
+    "numFollowed": 213,
+    "numFollowing": 12,
+    "tags": [
+      "Home Chef",
+      "Food Photographer"
+    ],
+    "link": [],
+    "preference": {
+      "allergy": [],
+      "illness": [],
+      "diet": [
+        "Bình thường"
+      ]
+    }
+  },
+  {
+    "_id": "7405ef78-7b70-4eba-8842-c567e5f8bb2e",
+    "user_name": "JJ_Reid",
+    "name": "Jonathan Reid",
+    "email": "fernandezricardo@yahoo.com",
+    "password": "%tZ6_Ib8td",
+    "avatar": "https://images.unsplash.com/photo-1718209881007-c0ecdfc00f9d?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTR8fGJ1c2luZXNzJTIwbWFufGVufDB8fDB8fHww&auto=format&fit=crop&q=60&w=600",
+    "numPosts": 14,
+    "numFollowed": 213,
+    "numFollowing": 12,
+    "tags": [],
+    "link": [],
+    "preference": {
+      "allergy": [],
+      "illness": [],
+      "diet": [
+        "Bình thường"
+      ]
+    }
+  },
+  {
+    "_id": "f49fafd5-29ae-43e6-b34e-3de255608f39",
+    "user_name": "Anne_love_dog",
+    "name": "Anne Jones",
+    "email": "marybrown@yahoo.com",
+    "password": "vX%3sxFs1E",
+    "avatar": "https://images.unsplash.com/photo-1589525231707-f2de2428f59c?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8YXNpYW4lMjB3b21hbnxlbnwwfHwwfHx8MA%3D%3D&auto=format&fit=crop&q=60&w=600",
+    "numPosts": 14,
+    "numFollowed": 213,
+    "numFollowing": 12,
+    "tags": [],
+    "link": [],
+    "preference": {
+      "allergy": [],
+      "illness": [],
+      "diet": [
+        "Bình thường"
+      ]
+    }
+  },
+  {
+    "_id": "81c87cfd-7f10-4c24-8ae0-94cc55c266e6",
+    "user_name": "Walshy",
+    "name": "Richard Walsh",
+    "email": "clarencelane@yahoo.com",
+    "password": "qiX!v8WbtE",
+    "avatar": "https://images.unsplash.com/photo-1584537229287-2ef4164d662e?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8OHx8c3BvcnQlMjBtYW58ZW58MHx8MHx8fDA%3D&auto=format&fit=crop&q=60&w=600",
+    "numPosts": 14,
+    "numFollowed": 213,
+    "numFollowing": 12,
+    "tags": [],
+    "link": [],
+    "preference": {
+      "allergy": [],
+      "illness": [],
+      "diet": [
+        "Bình thường"
+      ]
+    }
+  },
+  {
+    "_id": "05a7c87a-b0b9-424a-98d5-51ab1751a499",
+    "user_name": "AdamDRake",
+    "name": "Adam Drake",
+    "email": "wagnerrichard@hotmail.com",
+    "password": "60U1XioH(5",
+    "avatar": "https://images.unsplash.com/photo-1583394293214-28ded15ee548?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Nnx8Y2hlZnxlbnwwfHwwfHx8MA%3D%3D&auto=format&fit=crop&q=60&w=600",
+    "numPosts": 14,
+    "numFollowed": 213,
+    "numFollowing": 12,
+    "tags": [],
+    "link": [],
+    "preference": {
+      "allergy": [],
+      "illness": [],
+      "diet": [
+        "Bình thường"
+      ]
+    }
+  },
+  {
+    "_id": "7a501b7d-6812-48fd-bf44-2a8fefc6090e",
+    "user_name": "MichaelRosee",
+    "name": "Michael Rose",
+    "email": "mhess@davidson.info",
+    "password": "CkZDfhzD!4",
+    "avatar": "https://images.unsplash.com/photo-1577219492769-b63a779fac28?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTV8fGNoZWZ8ZW58MHx8MHx8fDA%3D&auto=format&fit=crop&q=60&w=600",
+    "numPosts": 14,
+    "numFollowed": 213,
+    "numFollowing": 12,
+    "tags": [],
+    "link": [],
+    "preference": {
+      "allergy": [],
+      "illness": [],
+      "diet": [
+        "Bình thường"
+      ]
+    }
+  },
+  {
+    "_id": "44880260-0cee-4370-8899-457dd40bafff",
+    "user_name": "ColonJeffrey",
+    "name": "Jeffrey Colon",
+    "email": "johnlewis@hotmail.com",
+    "password": "kMpS62Tp&!",
+    "avatar": "https://images.unsplash.com/photo-1600565193348-f74bd3c7ccdf?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8N3x8Y2hlZnxlbnwwfHwwfHx8MA%3D%3D&auto=format&fit=crop&q=60&w=600",
+    "numPosts": 14,
+    "numFollowed": 213,
+    "numFollowing": 12,
+    "tags": [],
+    "link": [],
+    "preference": {
+      "allergy": [],
+      "illness": [],
+      "diet": [
+        "Bình thường"
+      ]
+    }
+  },
+  {
+    "_id": "2ddfd73f-0f93-423f-8fa0-8e2e226b10a6",
+    "user_name": "AlexH12_3",
+    "name": "Alex Henderson",
+    "email": "kathrynanderson@may-cain.com",
+    "password": "^IS9+BTn_u",
+    "avatar": "https://images.unsplash.com/photo-1581349485608-9469926a8e5e?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8OHx8Y2hlZnxlbnwwfHwwfHx8MA%3D%3D&auto=format&fit=crop&q=60&w=600",
+    "numPosts": 14,
+    "numFollowed": 213,
+    "numFollowing": 12,
+    "tags": [],
+    "link": [],
+    "preference": {
+      "allergy": [],
+      "illness": [],
+      "diet": [
+        "Bình thường"
+      ]
+    }
+  },
+  {
+    "_id": "d2074b9f-9874-48fb-bcb9-fe0b4b151f82",
+    "user_name": "ValenC",
+    "name": "Michael Valencia",
+    "email": "laurenmiller@yahoo.com",
+    "password": "+P9N!ExP&G",
+    "avatar": "https://plus.unsplash.com/premium_photo-1667520524170-f7f44b5b0376?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NXx8YXNpYW4lMjB3b21hbnxlbnwwfHwwfHx8MA%3D%3D&auto=format&fit=crop&q=60&w=600",
+    "numPosts": 14,
+    "numFollowed": 213,
+    "numFollowing": 12,
+    "tags": [],
+    "link": [],
+    "preference": {
+      "allergy": [],
+      "illness": [],
+      "diet": [
+        "Bình thường"
+      ]
+    }
+  },
+  {
+    "_id": "d0a22c01-efd4-459e-8b11-a5898ee77da8",
+    "user_name": "JSP_45",
+    "name": "Joseph Page",
+    "email": "xkennedy@yahoo.com",
+    "password": "mFaUA*Dh(1",
+    "avatar": "https://images.unsplash.com/photo-1656812206128-5d17e5a2a93f?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTF8fGh1c2JhbmR8ZW58MHx8MHx8fDA%3D&auto=format&fit=crop&q=60&w=600",
+    "numPosts": 14,
+    "numFollowed": 213,
+    "numFollowing": 12,
+    "tags": [],
+    "link": [],
+    "preference": {
+      "allergy": [],
+      "illness": [],
+      "diet": [
+        "Bình thường"
+      ]
+    }
+  },
+  {
+    "_id": "1bf37477-8fd4-4eb7-849b-b10ad724679c",
+    "user_name": "Sherri_ken",
+    "name": "Sherry Kennedy",
+    "email": "hmurphy@gmail.com",
+    "password": "_vT6HWIi0Q",
+    "avatar": "https://images.unsplash.com/photo-1517615354272-efc29b707177?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8d2lmZXxlbnwwfHwwfHx8MA%3D%3D&auto=format&fit=crop&q=60&w=600",
+    "numPosts": 14,
+    "numFollowed": 213,
+    "numFollowing": 12,
+    "tags": [],
+    "link": [],
+    "preference": {
+      "allergy": [],
+      "illness": [],
+      "diet": [
+        "Bình thường"
+      ]
+    }
+  }
+]
