@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/white"
+    tools:context=".NewPostActivity">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/header_bar_new_post"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:paddingHorizontal="16dp"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <ImageView
+            android:id="@+id/btn_back"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:src="@drawable/ic_back_arrow"
+            android:padding="4dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            android:contentDescription="Back" />
+
+        <TextView
+            android:id="@+id/txt_screen_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Tạo bài viết"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="#000000"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <Button
+            android:id="@+id/btn_post"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:text="Đăng"
+            android:textColor="@android:color/white"
+            android:backgroundTint="#FF9800"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:minWidth="0dp"
+            android:paddingHorizontal="16dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <View
+        android:id="@+id/divider_header"
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#E0E0E0"
+        app:layout_constraintTop_toBottomOf="@+id/header_bar_new_post" />
+
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        app:layout_constraintTop_toBottomOf="@+id/divider_header"
+        app:layout_constraintBottom_toBottomOf="parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Loại bài viết"
+                android:layout_marginTop="8dp"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="#333"/>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="12dp">
+
+                <Button
+                    android:id="@+id/btn_type_moment"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Khoảnh khắc"
+                    android:backgroundTint="#FF9800"
+                    android:textColor="@android:color/white"
+                    android:layout_marginEnd="8dp"
+                    android:drawableStart="@drawable/ic_grid"
+                    android:paddingStart="16dp"
+                    android:gravity="center|start"
+                    android:drawablePadding="8dp"/>
+
+                <Button
+                    android:id="@+id/btn_type_recipe"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Công thức"
+                    android:backgroundTint="#E0E0E0"
+                    android:textColor="#333"
+                    android:layout_marginStart="8dp"
+                    android:drawableStart="@drawable/ic_recipe_book"
+                    android:paddingStart="16dp"
+                    android:gravity="center|start"
+                    android:drawablePadding="8dp"/>
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Ảnh / Video"
+                android:layout_marginTop="24dp"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="#333"/>
+
+            <TextView
+                android:id="@+id/txt_media_upload_area"
+                android:layout_width="match_parent"
+                android:layout_height="200dp"
+                android:layout_marginTop="12dp"
+                android:gravity="center"
+                android:text="Nhấn để thêm ảnh"
+                android:textColor="#888888"
+                android:textSize="14sp"
+                app:drawableTopCompat="@drawable/ic_photo_camera"
+                android:drawablePadding="12dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="@drawable/bg_rounded_gray" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Thêm mô tả"
+                android:layout_marginTop="24dp"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="#333"/>
+
+            <EditText
+                android:id="@+id/edit_description"
+                android:layout_width="match_parent"
+                android:layout_height="120dp"
+                android:layout_marginTop="12dp"
+                android:hint="Viết mô tả cho bài đăng (Bạn đang nghĩ gì?...)"
+                android:background="@drawable/bg_input_border"
+                android:padding="12dp"
+                android:gravity="top|start"
+                android:maxLength="500"
+                android:inputType="textMultiLine"
+                android:textSize="15sp"/>
+
+            <TextView
+                android:id="@+id/txt_char_count"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0/500"
+                android:layout_gravity="end"
+                android:layout_marginTop="4dp"
+                android:textColor="#888"
+                android:textSize="12sp"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Vị trí"
+                android:layout_marginTop="16dp"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="#333"/>
+
+            <EditText
+                android:id="@+id/edit_location"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:hint="Thêm vị trí của bạn"
+                android:padding="12dp"
+                android:drawableStart="@drawable/ic_location"
+                android:drawablePadding="12dp"
+                android:background="@drawable/bg_input_border"
+                android:inputType="textCapWords"
+                android:layout_marginBottom="32dp" />
+
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

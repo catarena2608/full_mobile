@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<EditText xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/rounded_edittext_background"
+    android:hint="Ví dụ: 500g Gạo trắng"
+    android:inputType="text"
+    android:padding="10dp"
+    android:layout_marginTop="4dp"
+    android:layout_marginBottom="4dp" />

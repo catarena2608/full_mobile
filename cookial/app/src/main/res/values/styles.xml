@@ -1,0 +1,36 @@
+<resources>
+    <style name="OtpBoxStyle">
+        <item name="android:layout_width">48dp</item>
+        <item name="android:layout_height">48dp</item>
+        <item name="android:layout_margin">4dp</item>
+        <item name="android:background">@drawable/bg_otp_circle</item>
+        <item name="android:gravity">center</item>
+        <item name="android:inputType">number</item>
+        <item name="android:maxLength">1</item>
+        <item name="android:textColor">#333333</item>
+        <item name="android:textSize">18sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+    <style name="PreferenceCheckbox" parent="Widget.MaterialComponents.CompoundButton.CheckBox">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_columnWeight">1</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginBottom">16dp</item>
+
+        <item name="android:button">@drawable/selector_custom_checkbox</item>
+
+        <item name="buttonTint">@null</item>
+        <item name="useMaterialThemeColors">false</item>
+
+        <item name="android:buttonTint">@null</item>
+        <item name="android:background">@android:color/transparent</item>
+
+        <item name="android:paddingStart">12dp</item>
+        <item name="android:textColor">#555555</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:gravity">center_vertical</item>
+
+        <item name="android:minHeight">0dp</item>
+        <item name="android:minWidth">0dp</item>
+    </style>
+</resources>

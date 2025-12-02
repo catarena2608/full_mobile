@@ -1,0 +1,47 @@
+<resources>
+    <string name="app_name">Cookial</string>
+    <string name="edit_profile_title">Edit Profile</string>
+    <string name="edit_profile_back_description">Back</string>
+    <string name="edit_profile_change_avatar">Đổi ảnh đại diện</string>
+    <string name="edit_profile_name_label">Tên</string>
+    <string name="edit_profile_name_hint">Nhập tên của bạn</string>
+    <string name="edit_profile_email_label">Email</string>
+    <string name="edit_profile_email_hint">example@gmail.com</string>
+    <string name="edit_profile_link_label">Link</string>
+    <string name="edit_profile_link_hint">yourblog.com</string>
+    <string name="edit_profile_save_button">Save</string>
+
+    <!-- Feed -->
+    <string name="description_avatar">Ảnh đại diện người dùng</string>
+    <string name="follow_button_text">Follow</string>
+    <string name="description_save_post">Lưu bài viết</string>
+    <string name="description_media">Ảnh hoặc video của bài viết</string>
+    <string name="description_like_post">Yêu thích bài viết</string>
+    <string name="description_comment_button">Bình luận về bài viết</string>
+
+    <!-- Post detail -->
+    <string name="post_detail_missing_id">Không tìm thấy thông tin bài viết.</string>
+    <string name="post_detail_generic_error">Không thể tải bài viết. Vui lòng thử lại.</string>
+    <string name="post_detail_network_error">Không thể kết nối tới máy chủ. Vui lòng kiểm tra kết nối và thử lại.</string>
+    <string name="post_detail_service_unavailable">Dịch vụ bài viết chưa sẵn sàng.</string>
+    <string name="action_retry">Thử lại</string>
+
+    <!-- Recipe detail -->
+    <string name="action_back">Quay lại</string>
+    <string name="action_options">Tùy chọn</string>
+    <string name="content_desc_recipe_image">Ảnh món ăn</string>
+    <string name="content_desc_avatar">Ảnh đại diện</string>
+    <string name="recipe_ration_time_format">Khẩu phần: %1$d người | Thời gian: %2$s</string>
+    <string name="label_ingredients">Nguyên liệu</string>
+    <string name="label_guide">Hướng dẫn</string>
+    <string name="label_comments">Bình luận</string>
+    <string name="label_related_dishes">Món liên quan</string>
+    <string name="hint_comment_input">Viết bình luận...</string>
+
+    <string name="screen_title_new_post">Tạo bài viết</string>
+    <string name="action_post">Đăng</string>
+    <string name="label_post_type">Loại bài viết</string>
+    <string name="button_regular_post">Khoảnh khắc</string>
+    <string name="button_recipe_guide">Công thức</string>
+</resources>
+

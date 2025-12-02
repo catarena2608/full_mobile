@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/white"
+    tools:context=".VerifyOtpActivity">
+
+    <ImageView
+        android:id="@+id/logoImageView"
+        android:layout_width="100dp"
+        android:layout_height="100dp"
+        android:layout_marginTop="60dp"
+        android:contentDescription="@string/app_name"
+        android:src="@drawable/facecook_logo"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/otpTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:text="Forgot Password"
+        android:textColor="#333333"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/logoImageView" />
+
+    <TextView
+        android:id="@+id/otpSubtitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="Enter the OTP sent to your email"
+        android:textColor="#555555"
+        android:textSize="14sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/otpTitle" />
+
+    <LinearLayout
+        android:id="@+id/otpContainer"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="40dp"
+        android:orientation="horizontal"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/otpSubtitle">
+
+        <EditText
+            android:id="@+id/otp1"
+            style="@style/OtpBoxStyle"
+            android:inputType="number"
+            android:maxLength="1"
+            android:gravity="center"
+            android:maxLines="1"/>
+
+        <EditText
+            android:id="@+id/otp2"
+            style="@style/OtpBoxStyle"
+            android:inputType="number"
+            android:maxLength="1"
+            android:gravity="center"
+            android:maxLines="1"/>
+
+        <EditText
+            android:id="@+id/otp3"
+            style="@style/OtpBoxStyle"
+            android:inputType="number"
+            android:maxLength="1"
+            android:gravity="center"
+            android:maxLines="1"/>
+
+        <EditText
+            android:id="@+id/otp4"
+            style="@style/OtpBoxStyle"
+            android:inputType="number"
+            android:maxLength="1"
+            android:gravity="center"
+            android:maxLines="1"/>
+
+        <EditText
+            android:id="@+id/otp5"
+            style="@style/OtpBoxStyle"
+            android:inputType="number"
+            android:maxLength="1"
+            android:gravity="center"
+            android:maxLines="1"/>
+
+        <EditText
+            android:id="@+id/otp6"
+            style="@style/OtpBoxStyle"
+            android:inputType="number"
+            android:maxLength="1"
+            android:gravity="center"
+            android:maxLines="1"/>
+
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/resendTextView"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="40dp"
+        android:layout_marginTop="32dp"
+        android:gravity="center"
+        android:text="Didn't receive the mail? You can resend\nit in 50 sec"
+        android:textColor="@android:color/black"
+        android:textSize="13sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/otpContainer" />
+
+    <androidx.appcompat.widget.AppCompatButton
+        android:id="@+id/continueButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="32dp"
+        android:background="@drawable/bg_button_orange"
+        android:minWidth="200dp"
+        android:paddingHorizontal="32dp"
+        android:text="Continue"
+        android:textAllCaps="false"
+        android:textColor="@android:color/white"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/resendTextView" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

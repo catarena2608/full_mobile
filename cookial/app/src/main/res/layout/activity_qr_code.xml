@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_gradient_orange">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/headerLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="16dp"
+        android:background="@android:color/white"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <ImageView
+            android:id="@+id/btn_back"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:src="@drawable/ic_back_arrow"
+            android:background="@drawable/bg_circle_gray_transparent"
+            android:padding="6dp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:tint="#333"/> <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="MÃ QR CỦA TÔI"
+        android:textColor="#000"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"/>
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/qrContainer"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_card_border"
+        android:paddingBottom="32dp"
+        android:layout_marginHorizontal="40dp"
+        android:layout_marginTop="40dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/headerLayout">
+
+        <androidx.cardview.widget.CardView
+            android:id="@+id/cv_qr_image"
+            android:layout_width="300dp"
+            android:layout_height="300dp"
+            android:layout_marginTop="32dp"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="0dp"
+            app:cardBackgroundColor="@android:color/white"
+            app:layout_constraintDimensionRatio="1:1"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
+
+            <ImageView
+                android:id="@+id/iv_qr_code"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:padding="0dp"
+                android:src="@drawable/ic_qr_code"
+                android:scaleType="fitCenter"/>
+        </androidx.cardview.widget.CardView>
+
+        <TextView
+            android:id="@+id/tv_qr_username"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="_thanhhuy_leo10"
+            android:textColor="#555"
+            android:textSize="14sp"
+            android:layout_marginTop="8dp"
+            android:paddingBottom="8dp"
+            app:layout_constraintBottom_toBottomOf="@id/cv_qr_image"
+            app:layout_constraintStart_toStartOf="@id/cv_qr_image"
+            app:layout_constraintEnd_toEndOf="@id/cv_qr_image"
+            app:layout_constraintTop_toBottomOf="@id/cv_qr_image"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Quét mã để theo dõi tôi"
+            android:textColor="#333"
+            android:textSize="18sp"
+            android:layout_marginTop="40dp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/tv_qr_username"/>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_card_border"
+        android:orientation="horizontal"
+        android:paddingVertical="16dp"
+        android:layout_marginTop="16dp"
+        android:weightSum="3"
+        app:layout_constraintStart_toStartOf="@id/qrContainer"
+        app:layout_constraintEnd_toEndOf="@id/qrContainer"
+        app:layout_constraintTop_toBottomOf="@id/qrContainer">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <ImageButton
+                android:layout_width="65dp"
+                android:layout_height="65dp"
+                android:background="@drawable/bg_circle_white"
+                android:src="@drawable/ic_share"
+                android:padding="8dp"
+                android:scaleType="fitCenter"
+                android:contentDescription="Share"/> <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Chia sẻ"
+            android:textSize="16sp"
+            android:textColor="#000"
+            android:layout_marginTop="8dp"/>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <ImageButton
+                android:layout_width="65dp"
+                android:layout_height="65dp"
+                android:background="@drawable/bg_circle_white"
+                android:src="@drawable/ic_download"
+                android:padding="7dp"
+                android:scaleType="fitCenter"
+                android:contentDescription="Download"/> <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Tải xuống"
+            android:textSize="16sp"
+            android:textColor="#000"
+            android:layout_marginTop="8dp"/>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <ImageButton
+                android:layout_width="65dp"
+                android:layout_height="65dp"
+                android:background="@drawable/bg_circle_white"
+                android:src="@drawable/ic_copy"
+                android:padding="8dp"
+                android:scaleType="fitCenter"
+                android:contentDescription="Copy"/> <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Sao chép"
+            android:textSize="16sp"
+            android:textColor="#000"
+            android:layout_marginTop="8dp"/>
+        </LinearLayout>
+
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

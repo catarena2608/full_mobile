@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="colorOrange">#FFA726</color>
+    <color name="white">#FFFFFF</color>
+        <color name="cookingModeGreen">#72b844</color>
+        <color name="cookingModeCardGreen">#CCF0B6</color>
+        <color name="cookingModeTimerGreen">#86C160</color>
+        <color name="Black">#000000</color>
+</resources>
