@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-post
+spec:
+  selector:
+    app: backend-post
+  ports:
+    - port: 4001
+      targetPort: 4001
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-post
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend-post
+  template:
+    metadata:
+      labels:
+        app: backend-post
+    spec:
+      containers:
+        - name: backend-post
+          image: catarena/backend_post:latest
+          ports:
+            - containerPort: 4001

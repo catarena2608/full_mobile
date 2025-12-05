@@ -40,4 +40,24 @@ public class TokenManager {
         editor.remove("COOKIES");
         editor.apply();
     }
+    public static String getTokenFromCookie(Context context) {
+        // Lấy SharedPreferences (Dùng hàm getPrefs có sẵn để đảm bảo đúng file)
+        SharedPreferences prefs = getPrefs(context);
+
+        // Lấy tập hợp các cookie đã lưu (Key "COOKIES" phải khớp với RetrofitClient)
+        java.util.Set<String> cookies = prefs.getStringSet("COOKIES", new java.util.HashSet<>());
+
+        for (String cookie : cookies) {
+            // Tìm cookie chứa token (Format thường là: token=eyJhbGci...; Path=/; ...)
+            if (cookie.trim().startsWith("token=")) {
+                // Cắt lấy phần token chính
+                String[] parts = cookie.split(";");
+                String tokenPart = parts[0]; // Lấy "token=eyJhbGci..."
+
+                // Bỏ chữ "token=" để lấy mã sạch
+                return tokenPart.replace("token=", "");
+            }
+        }
+        return null; // Không tìm thấy token
+    }
 }

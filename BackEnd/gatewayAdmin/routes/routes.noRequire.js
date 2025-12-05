@@ -1,3 +1,3 @@
 module.exports = {
-  "/stat/login":"http://localhost:7001",
+  "/stat/login":"http://backend-static:7001",
 };

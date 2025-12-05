@@ -5,6 +5,7 @@ import java.util.Map;
 
 import course.examples.nt118.model.CommentListResponse;
 import course.examples.nt118.model.LoginResponse;
+import course.examples.nt118.model.Notify;
 import course.examples.nt118.model.PostsResponse;
 import course.examples.nt118.model.RecipeResponse;
 import course.examples.nt118.model.UploadPostResponse;
@@ -154,4 +155,12 @@ public interface ApiService {
             @Part("tags") RequestBody tags,
             @Part List<MultipartBody.Part> files
     );
+
+    // ================= NOTIFY (Thông báo) =================
+
+    @GET("notify/{userID}")
+    Call<List<Notify>> getNotifications(@Path("userID") String userID);
+
+    @PATCH("notify/{notifyID}/read")
+    Call<ResponseBody> markNotificationRead(@Path("notifyID") String notifyID);
 }

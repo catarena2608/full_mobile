@@ -1,0 +1,120 @@
+version: '3.8'
+
+services:
+  api-gateway:
+    image: catarena/gateway:latest 
+    container_name: api-gateway
+    restart: always
+    ports:
+      - "3000:3000" 
+    networks:
+      - microservice-net
+    depends_on: # Đảm bảo Gateway chạy sau các service khác (tùy chọn)
+      - backend-auth
+      - backend-user
+      - backend-recipe
+      - backend-post
+      - backend-notify
+
+  api-gatewayAdmin:
+    image: catarena/gatewayadmin:latest 
+    container_name: api-gatewayadmin
+    restart: always
+    ports:
+      - "9000:9000" 
+    networks:
+      - microservice-net
+    depends_on: # Đảm bảo Gateway chạy sau các service khác (tùy chọn)
+      - backend-static
+      - backend-auth
+      - backend-user
+      - backend-recipe
+      - backend-post
+      - backend-notify
+
+
+  backend-auth:
+    image: catarena/backend_auth:latest
+    container_name: backend-auth
+    restart: always
+    expose:
+      - "3001" 
+    networks:
+      - microservice-net
+
+  backend-post:
+    image: catarena/backend_post:latest
+    container_name: backend-post
+    restart: always
+    expose:
+      - "4001"
+    networks:
+      - microservice-net
+    depends_on:
+      - rabbitmq 
+
+  backend-user:
+    image: catarena/backend_user:latest
+    container_name: backend-user
+    restart: always
+    expose:
+      - "3002"
+    networks:
+      - microservice-net
+    depends_on:
+      - rabbitmq 
+      
+  backend-recipe:
+    image: catarena/backend_recipe:latest
+    container_name: backend-recipe
+    restart: always
+    expose:
+      - "5001"
+    networks:
+      - microservice-net
+
+  backend-notify:
+    image: catarena/backend_notify:latest
+    container_name: backend-notify
+    restart: always
+    expose:
+      - "6001" 
+    networks:
+      - microservice-net
+    depends_on:
+      - rabbitmq # Notify thường cần RabbitMQ để nhận tin nhắn
+
+  backend-static:
+    image: catarena/backend_static:latest
+    container_name: backend-static
+    restart: always
+    expose:
+      - "7001"
+    networks:
+      - microservice-net
+    depends_on:
+      - rabbitmq
+
+  # --- PHẦN THÊM RABBITMQ ---
+  rabbitmq:
+    image: rabbitmq:3-management # Dùng bản management để có giao diện Web quản lý
+    container_name: rabbitmq
+    restart: always
+    ports:
+      - "5672:5672"   # Port chính để các backend kết nối gửi/nhận tin
+      - "15672:15672" # Port giao diện quản lý (truy cập bằng web)
+    environment:
+      RABBITMQ_DEFAULT_USER: user
+      RABBITMQ_DEFAULT_PASS: password
+    networks:
+      - microservice-net
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq # (Quan trọng) Giữ lại dữ liệu khi tắt container
+
+networks:
+  microservice-net:
+    driver: bridge
+
+# Khai báo volume để lưu dữ liệu RabbitMQ bền vững
+volumes:
+  rabbitmq_data:
