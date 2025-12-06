@@ -206,10 +206,11 @@ public class NewRecipePostActivity extends AppCompatActivity {
     }
 
     // ==================================================================
-    // 4. API UPLOAD
+    // 4. API UPLOAD FLOW (2 BƯỚC - ĐÃ SỬA: KHÔNG TRUYỀN ID)
     // ==================================================================
 
     private void attemptUpload() {
+        // Validation cơ bản
         if (TextUtils.isEmpty(binding.editRecipeName.getText())) {
             binding.editRecipeName.setError("Nhập tên món ăn!");
             binding.editRecipeName.requestFocus();
@@ -222,53 +223,92 @@ public class NewRecipePostActivity extends AppCompatActivity {
 
         progressDialog.show();
 
-        // 1. Text Data
+        // --- BƯỚC 1: UPLOAD RECIPE CHI TIẾT ---
+        uploadRecipeDetail();
+    }
+
+    // BƯỚC 1: Gọi API tạo công thức (Giữ nguyên logic cũ)
+    private void uploadRecipeDetail() {
+        // Chuẩn bị dữ liệu Recipe
         RequestBody api_caption = toRequestBody(binding.editDescription.getText().toString());
         RequestBody api_postID = toRequestBody("");
         RequestBody api_name = toRequestBody(binding.editRecipeName.getText().toString());
         RequestBody api_description = toRequestBody(binding.editDescription.getText().toString());
         RequestBody api_ration = toRequestBody(binding.editRation.getText().toString());
         RequestBody api_time = toRequestBody(binding.editTime.getText().toString());
-
-        // 2. JSON Data
         RequestBody api_ingredients = toRequestBody(generateIngredientsJson());
         RequestBody api_guide = toRequestBody(generateGuideJson());
         RequestBody api_tags = toRequestBody("[]");
-
-        // 3. Image
         List<MultipartBody.Part> media = prepareImagePart();
 
-        // 4. Call API (Truyền đúng thứ tự 10 RequestBody + 1 List)
         ApiService apiService = RetrofitClient.getInstance(this).getApiService();
         apiService.uploadRecipe(
-                 api_caption, api_postID, api_name, api_description,
+                api_caption, api_postID, api_name, api_description,
                 api_ration, api_time, api_ingredients, api_guide, api_tags, media
-        ).enqueue(new Callback<UploadPostResponse>() { // [SỬA] Dùng UploadPostResponse
+        ).enqueue(new Callback<UploadPostResponse>() {
             @Override
             public void onResponse(Call<UploadPostResponse> call, Response<UploadPostResponse> response) {
-                progressDialog.dismiss();
-                // Kiểm tra response.body().isSuccess() giống NewPostActivity
+                // Kiểm tra thành công bước 1
                 if (response.isSuccessful() && response.body() != null && response.body().isSuccess()) {
-                    Log.i(TAG, "Upload Recipe Success!");
-                    Toast.makeText(NewRecipePostActivity.this, "Đăng công thức thành công!", Toast.LENGTH_LONG).show();
-                    setResult(RESULT_OK);
-                    finish();
+                    Log.d(TAG, "Step 1 Success (Recipe Created)");
+
+                    // --- CHUYỂN SANG BƯỚC 2: TẠO POST ---
+                    // Không cần truyền ID nữa
+                    uploadPostEntry();
+
                 } else {
-                    String errorMsg = (response.body() != null) ? response.body().getMessage() : "Lỗi: " + response.code();
-                    Log.e(TAG, "Upload Failed: " + errorMsg);
-                    handleError("Đăng bài thất bại: " + errorMsg);
+                    progressDialog.dismiss();
+                    String msg = response.body() != null ? response.body().getMessage() : String.valueOf(response.code());
+                    handleError("Lỗi tạo Recipe: " + msg);
                 }
             }
 
             @Override
             public void onFailure(Call<UploadPostResponse> call, Throwable t) {
                 progressDialog.dismiss();
-                Log.e(TAG, "Network Error", t);
-                handleError("Lỗi kết nối mạng!");
+                Log.e(TAG, "Step 1 Failed", t);
+                handleError("Lỗi kết nối khi tạo Recipe!");
             }
         });
     }
 
+    // BƯỚC 2: Gọi API tạo bài viết (ĐÃ SỬA POST ENTRY)
+    private void uploadPostEntry() {
+        // 1. Chuẩn bị các trường dữ liệu theo Interface mới
+        List<MultipartBody.Part> files = prepareImagePart(); // Dùng lại ảnh thumbnail
+        RequestBody api_type = toRequestBody("Recipe");      // Type cố định là Recipe
+        RequestBody api_caption = toRequestBody(binding.editDescription.getText().toString());
+        RequestBody api_tag = toRequestBody("[]");
+        RequestBody api_location = toRequestBody("");        // Location để rỗng
+
+        ApiService apiService = RetrofitClient.getInstance(this).getApiService();
+
+        // 2. Gọi hàm uploadPost khớp với Interface
+        apiService.uploadPost(files, api_type, api_caption, api_tag, api_location)
+                .enqueue(new Callback<UploadPostResponse>() {
+                    @Override
+                    public void onResponse(Call<UploadPostResponse> call, Response<UploadPostResponse> response) {
+                        progressDialog.dismiss(); // Tắt loading
+
+                        if (response.isSuccessful() && response.body() != null && response.body().isSuccess()) {
+                            Log.i(TAG, "Step 2 Success. Post Created!");
+                            Toast.makeText(NewRecipePostActivity.this, "Đăng bài thành công!", Toast.LENGTH_LONG).show();
+                            setResult(RESULT_OK);
+                            finish();
+                        } else {
+                            String msg = response.body() != null ? response.body().getMessage() : String.valueOf(response.code());
+                            handleError("Tạo Recipe xong nhưng lỗi đăng Post: " + msg);
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(Call<UploadPostResponse> call, Throwable t) {
+                        progressDialog.dismiss();
+                        Log.e(TAG, "Step 2 Failed", t);
+                        handleError("Lỗi kết nối khi đăng Post!");
+                    }
+                });
+    }
     private void handleError(String msg) {
         Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
     }

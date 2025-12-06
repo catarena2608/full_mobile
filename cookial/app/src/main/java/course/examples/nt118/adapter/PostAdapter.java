@@ -86,21 +86,38 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
     public static String getRelativeTimeSpan(String isoDateTime) {
         if (isoDateTime == null || isoDateTime.isEmpty()) return "";
 
-        SimpleDateFormat isoFormatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault());
+        // 1. Chuẩn bị định dạng: Xử lý cả trường hợp có và không có mili-giây
+        SimpleDateFormat isoFormatter;
+        if (isoDateTime.contains(".")) {
+            // Có mili-giây (ví dụ: .473Z)
+            isoFormatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault());
+        } else {
+            // Không có mili-giây (ví dụ: ...:23Z)
+            isoFormatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.getDefault());
+        }
         isoFormatter.setTimeZone(TimeZone.getTimeZone("UTC"));
 
         try {
             Date pastDate = isoFormatter.parse(isoDateTime);
             long now = System.currentTimeMillis();
+
+            // Tính khoảng cách
             long difference = now - pastDate.getTime();
 
+            // 2. SỬA LỖI LỆCH GIỜ (Clock Drift)
+            // Nếu bài viết mới đăng nhưng đồng hồ máy user chậm hơn server vài giây
+            // difference sẽ bị âm. Ta coi như là "Vừa xong" nếu lệch dưới 1 phút.
             if (difference < 0) {
+                if (difference > -60000) { // Lệch trong vòng 1 phút tương lai
+                    return "Vừa xong";
+                }
+
+                // Nếu lệch quá xa (tương lai thực sự), hiển thị ngày tháng
                 SimpleDateFormat outputFormatter = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault());
-                outputFormatter.setTimeZone(TimeZone.getDefault());
-                Log.e(TAG, "Post time is in the future. Difference: " + difference);
                 return outputFormatter.format(pastDate);
             }
 
+            // Các mốc thời gian cũ
             long seconds = TimeUnit.MILLISECONDS.toSeconds(difference);
             if (seconds < 60) {
                 return "Vừa xong";
@@ -126,14 +143,13 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
                 return weeks + " tuần trước";
             }
 
-            // Nếu quá 4 tuần, hiển thị ngày tháng cụ thể
+            // Quá 1 tháng thì hiện ngày
             SimpleDateFormat outputFormatter = new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault());
-            outputFormatter.setTimeZone(TimeZone.getDefault());
-
             return outputFormatter.format(pastDate);
 
         } catch (ParseException e) {
-            Log.e(TAG, "LỖI PARSE DATE: Chuỗi: " + isoDateTime + ", Lỗi: " + e.getMessage());
+            e.printStackTrace();
+            // Nếu parse lỗi, trả về chính chuỗi gốc hoặc rỗng để debug
             return "";
         }
     }
@@ -250,13 +266,6 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
             View.OnClickListener detailClick = v -> listener.onPostClicked(post);
             binding.getRoot().setOnClickListener(detailClick);
             binding.ivPostImage.setOnClickListener(detailClick);
-
-            holder.itemView.setOnLongClickListener(v -> {
-                if (listener != null) {
-                    listener.onPostLongClicked(v, post);
-                }
-                return true; // Trả về true để báo là sự kiện đã được xử lý (không kích hoạt onClick thường nữa)
-            });
         }
 
         // --- Helper Methods ---
@@ -304,6 +313,5 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
         void onCommentClicked(Post post);
         void onPostClicked(Post post);
         void onUserClick(String userID); // Thêm hàm này để xem Profile
-        void onPostLongClicked(View view, Post post);
     }
 }

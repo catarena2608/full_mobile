@@ -36,14 +36,14 @@ android {
 
 dependencies {
     implementation("io.socket:socket.io-client:2.1.0") {
-        exclude(group = "org.json", module = "json  l")
+        exclude(group = "org.json", module = "json") // Corrected the module name from 'json  l'
     }
-    // --- CORE ANDROID (Đã sửa phiên bản mới nhất để tránh lỗi linking) ---
+    // --- CORE ANDROID ---
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")
     implementation("com.google.zxing:core:3.4.1")
-    implementation("androidx.appcompat:appcompat:1.7.0")
-    implementation("com.google.android.material:material:1.12.0")
-    implementation("androidx.activity:activity:1.9.3")
+    implementation(libs.appcompat) // Use alias from version catalog
+    implementation(libs.material) // Use alias from version catalog
+    implementation(libs.activity) // Use alias from version catalog
     implementation(libs.constraintlayout)
     implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
 

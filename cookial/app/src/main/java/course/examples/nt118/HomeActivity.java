@@ -178,12 +178,16 @@ public class HomeActivity extends AppCompatActivity implements PostAdapter.PostI
 
     private void fetchAllPostsFromServer() {
         Log.d(TAG, "API: Fetching All Posts (Global Feed)...");
+
+        // Fix cache (như đã sửa ở bước trước)
+        userCache.clear();
+
         isLoading = true;
         binding.swipeRefreshLayout.setRefreshing(true);
 
         ApiService apiService = RetrofitClient.getInstance(this).getApiService();
 
-        // Call API to get posts (Newfeed) - Pass null userID to get all
+        // Call API to get posts (Newfeed)
         apiService.getAllPosts(null, null, null, null, null).enqueue(new Callback<PostsResponse>() {
             @Override
             public void onResponse(Call<PostsResponse> call, Response<PostsResponse> response) {
@@ -191,31 +195,35 @@ public class HomeActivity extends AppCompatActivity implements PostAdapter.PostI
                 isLoading = false;
 
                 if (response.isSuccessful() && response.body() != null) {
-                    List<Post> rawPosts = response.body().getPosts(); // Lấy List<Post> luôn
+                    List<Post> rawPosts = response.body().getPosts();
 
                     if (rawPosts != null && !rawPosts.isEmpty()) {
 
-                        // [LOGIC TO FILTER OUT MY OWN POSTS]
-                        List<Post> filteredList = new ArrayList<>();
+                        // --- [ĐÃ SỬA] ---
+                        // Tạo list mới để xử lý dữ liệu (không lọc bỏ bài của mình nữa)
+                        List<Post> processedList = new ArrayList<>();
+
                         for (Post p : rawPosts) {
-                            if (p.getUserID() != null && !p.getUserID().equals(userId)) {
-                                // Set mặc định các trường UI
+                            // Chỉ kiểm tra null cho an toàn, BỎ đoạn check !equals(userId)
+                            if (p.getUserID() != null) {
+                                // Vẫn cần set placeholder để tránh lỗi hiển thị trong lúc chờ load info user
                                 p.setUserName("Loading...");
                                 p.setUserAvatar("");
-                                // Lưu ý: meLike, isBookmarked đã được GSON tự map vào Post rồi
-                                filteredList.add(p);
+
+                                processedList.add(p);
                             }
                         }
+                        // ----------------
 
-                        if (!filteredList.isEmpty()) {
+                        if (!processedList.isEmpty()) {
                             mAllPostsBuffer.clear();
-                            mAllPostsBuffer.addAll(filteredList);
+                            mAllPostsBuffer.addAll(processedList); // Nạp tất cả vào buffer
                             mCurrentDisplayCount = 0;
 
                             postAdapter.setData(new ArrayList<>());
                             loadMoreFromBuffer();
                         } else {
-                            Toast.makeText(HomeActivity.this, "Không có bài viết mới từ người khác", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(HomeActivity.this, "Không có bài viết nào", Toast.LENGTH_SHORT).show();
                         }
                     } else {
                         Toast.makeText(HomeActivity.this, "Danh sách trống", Toast.LENGTH_SHORT).show();
@@ -412,6 +420,19 @@ public class HomeActivity extends AppCompatActivity implements PostAdapter.PostI
             }
 
             if (changed) postAdapter.notifyItemChanged(i);
+        }
+        // --- THÊM PHẦN NÀY: Cập nhật luôn vào userCache ---
+        if ("FOLLOW".equals(type)) {
+            // id ở đây chính là targetUserID
+            if (userCache.containsKey(id)) {
+                UserResponse cachedUser = userCache.get(id);
+                if (cachedUser != null) {
+                    // Cập nhật trạng thái trong cache
+                    cachedUser.setMeFollow(newState);
+                    // Lưu đè lại vào map (cho chắc ăn)
+                    userCache.put(id, cachedUser);
+                }
+            }
         }
     }
 

@@ -135,6 +135,11 @@
             android:exported="false"
             android:windowSoftInputMode="adjustResize|stateHidden" />
 
+        <activity
+            android:name=".CookingEndActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize|stateHidden" />
+
 
 
     </application>

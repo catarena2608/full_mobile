@@ -1,51 +1,125 @@
 package course.examples.nt118.model;
 
+import com.google.gson.annotations.SerializedName;
+import java.io.Serializable;
 import java.util.List;
-import java.util.Map;
 
 public class RecipeResponse {
+    @SerializedName("success")
     public boolean success;
+
+    @SerializedName("message")
+    public String message;
+
+    @SerializedName("recipe") // Có thể là "data" tùy server
     public Recipe recipe;
 
-    public static class Recipe {
-        public String _id;
-        public String userID;
-        public String postID;
-
-        public String name;
-        public String description;
-        public int ration;
-        public String time;
-        public String thumbnail;
-        public String caption;
-
-        // ✅ ingredients (4 nhóm)
-        public IngredientGroup ingredients;
-
-        // ✅ guide (list step)
-        public List<Step> guide;
-
-        // ✅ tags
-        public List<String> tags;
+    public Recipe getRecipe() {
+        return recipe;
     }
 
-    // ✅ ingredient group: base / comple / spice / other
-    public static class IngredientGroup {
-        public List<Ingredient> base;
-        public List<Ingredient> comple;
-        public List<Ingredient> spice;
-        public List<Ingredient> other;
+    // ==========================================
+    // CLASS: RECIPE (Đã thêm implement Serializable)
+    // ==========================================
+    public static class Recipe implements Serializable {
+        @SerializedName("_id")
+        private String _id;
+
+        @SerializedName("userID")
+        private String userID;
+
+        @SerializedName("name")
+        private String name;
+
+        @SerializedName("description")
+        private String description;
+
+        @SerializedName("ration")
+        private int ration;
+
+        @SerializedName("time")
+        private String time;
+
+        @SerializedName("caption")
+        private String caption;
+
+        @SerializedName("media")
+        private List<String> media;
+
+        @SerializedName("ingredients")
+        private Ingredients ingre;
+
+        @SerializedName("guide")
+        private List<Step> guide;
+
+        @SerializedName("tags")
+        private List<String> tags;
+
+        // --- GETTERS ---
+        public String get_id() { return _id; }
+        public String getUserID() { return userID; }
+        public String getName() { return name; }
+        public String getDescription() { return description; }
+        public int getRation() { return ration; }
+        public String getTime() { return time; }
+        public String getCaption() { return caption; }
+        public List<String> getMedia() { return media; }
+        public Ingredients getIngre() { return ingre; }
+        public List<Step> getGuide() { return guide; }
+        public List<String> getTags() { return tags; }
     }
 
-    public static class Ingredient {
-        public String quantity;
-        public String name;
+    // ==========================================
+    // CLASS: INGREDIENTS
+    // ==========================================
+    public static class Ingredients implements Serializable {
+        @SerializedName("base")
+        private List<Ingredient> base;
+
+        @SerializedName("comple")
+        private List<Ingredient> comple;
+
+        @SerializedName("spice")
+        private List<Ingredient> spice;
+
+        @SerializedName("other")
+        private List<Ingredient> other;
+
+        public List<Ingredient> getBase() { return base; }
+        public List<Ingredient> getComple() { return comple; }
+        public List<Ingredient> getSpice() { return spice; }
+        public List<Ingredient> getOther() { return other; }
     }
 
-    // ✅ step (bước nấu ăn)
-    public static class Step {
-        public int step;
-        public String content;
-        public List<String> media;
+    // ==========================================
+    // CLASS: INGREDIENT ITEM
+    // ==========================================
+    public static class Ingredient implements Serializable {
+        @SerializedName("quantity")
+        private String quantity;
+
+        @SerializedName("name")
+        private String name;
+
+        public String getQuantity() { return quantity; }
+        public String getName() { return name; }
+    }
+
+    // ==========================================
+    // CLASS: STEP
+    // ==========================================
+    public static class Step implements Serializable {
+        @SerializedName("step")
+        private int step;
+
+        @SerializedName("content")
+        private String content;
+
+        @SerializedName("media")
+        private List<String> media;
+
+        public int getStep() { return step; }
+        public String getContent() { return content; }
+        public List<String> getMedia() { return media; }
     }
 }

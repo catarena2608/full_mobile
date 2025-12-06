@@ -12,8 +12,8 @@ const upload = multer({ storage });
 // 🧩 POST /api/recipe/upload
 router.post("/upload", upload.array("media", 50), async (req, res) => {
   try {
-    const userId = req.headers["x-user-id"];
-    if (!userId) {
+    const userID = req.headers["x-user-id"];
+    if (!userID) {
       return res.status(401).json({ message: "Thiếu thông tin user từ Gateway" });
     }
     const {

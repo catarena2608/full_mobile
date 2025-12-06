@@ -11,6 +11,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
+import android.util.Log;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -25,6 +26,7 @@ import java.io.OutputStream;
 
 public class MyQrCodeActivity extends AppCompatActivity {
 
+    private static final String TAG = MyQrCodeActivity.class.getSimpleName();
     private ImageView ivQrCode, btnBack;
     private TextView tvQrUsername;
     private ImageButton btnShare, btnDownload, btnCopy;
@@ -36,12 +38,31 @@ public class MyQrCodeActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        Log.d(TAG, "2. onStart");
         setContentView(R.layout.activity_qr_code); // Tên file xml của bạn
 
         initViews();
         getDataFromIntent();
         setupActions();
     }
+
+    @Override
+    protected void onStart() { super.onStart(); Log.d(TAG, "2. onStart"); }
+
+    @Override
+    protected void onResume() { super.onResume(); Log.d(TAG, "3. onResume"); }
+
+    @Override
+    protected void onPause() { super.onPause(); Log.d(TAG, "4. onPause"); }
+
+    @Override
+    protected void onStop() { super.onStop(); Log.d(TAG, "5. onStop"); }
+
+    @Override
+    protected void onRestart() { super.onRestart(); Log.d(TAG, "6. onRestart"); }
+
+    @Override
+    protected void onDestroy() { super.onDestroy(); Log.d(TAG, "7. onDestroy"); }
 
     private void initViews() {
         ivQrCode = findViewById(R.id.iv_qr_code);

@@ -29,7 +29,7 @@ import retrofit2.Response;
 
 public class SavedPostsActivity extends AppCompatActivity {
 
-    private static final String TAG = "SavedPostsActivity";
+    private static final String TAG = SavedPostsActivity.class.getSimpleName();
     private ActivitySavedPostBinding binding;
     private SavedPostAdapter adapter;
 
@@ -52,6 +52,7 @@ public class SavedPostsActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        Log.d(TAG, "1. onCreate");
         binding = ActivitySavedPostBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
@@ -66,6 +67,24 @@ public class SavedPostsActivity extends AppCompatActivity {
         setupBottomNavigation();
         fetchSavedPosts();
     }
+
+    @Override
+    protected void onStart() { super.onStart(); Log.d(TAG, "2. onStart"); }
+
+    @Override
+    protected void onResume() { super.onResume(); Log.d(TAG, "3. onResume"); }
+
+    @Override
+    protected void onPause() { super.onPause(); Log.d(TAG, "4. onPause"); }
+
+    @Override
+    protected void onStop() { super.onStop(); Log.d(TAG, "5. onStop"); }
+
+    @Override
+    protected void onRestart() { super.onRestart(); Log.d(TAG, "6. onRestart"); }
+
+    @Override
+    protected void onDestroy() { super.onDestroy(); Log.d(TAG, "7. onDestroy"); }
 
     private void setupUI() {
         adapter = new SavedPostAdapter(this, this::openPostDetail);
