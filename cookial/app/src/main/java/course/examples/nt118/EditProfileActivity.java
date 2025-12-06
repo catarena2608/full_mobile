@@ -109,7 +109,6 @@ public class EditProfileActivity extends AppCompatActivity {
         avatarImageView = findViewById(R.id.iv_avatar);
         backButton = findViewById(R.id.btn_back);
         nameEditText = findViewById(R.id.et_name);
-        usernameEditText = findViewById(R.id.et_username);
         emailEditText = findViewById(R.id.et_email);
         linkEditText = findViewById(R.id.et_link); // Link profile (Facebook/Insta...)
         saveButton = findViewById(R.id.btn_save);

@@ -39,6 +39,8 @@ dependencies {
         exclude(group = "org.json", module = "json  l")
     }
     // --- CORE ANDROID (Đã sửa phiên bản mới nhất để tránh lỗi linking) ---
+    implementation("com.journeyapps:zxing-android-embedded:4.3.0")
+    implementation("com.google.zxing:core:3.4.1")
     implementation("androidx.appcompat:appcompat:1.7.0")
     implementation("com.google.android.material:material:1.12.0")
     implementation("androidx.activity:activity:1.9.3")

@@ -95,23 +95,7 @@
                 android:paddingHorizontal="16dp"
                 android:textColor="#333" />
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:text="Tên người dùng"
-                android:textColor="#555"
-                android:textSize="14sp" />
 
-            <EditText
-                android:id="@+id/et_username"
-                android:layout_width="match_parent"
-                android:layout_height="50dp"
-                android:layout_marginTop="8dp"
-                android:background="@drawable/bg_input_border"
-                android:inputType="text"
-                android:paddingHorizontal="16dp"
-                android:textColor="#333" />
 
             <TextView
                 android:layout_width="wrap_content"

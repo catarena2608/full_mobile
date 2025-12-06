@@ -48,6 +48,8 @@ public class ProfileActivity extends AppCompatActivity {
     private LinearLayout layoutLink, layoutButtons;
     private RecyclerView rvProfileImages;
 
+    private UserResponse currentUser;
+
     // Tabs UI
     private LinearLayout tabPosts, tabSaved;
     private TextView tvTabPosts, tvTabSaved;
@@ -71,6 +73,17 @@ public class ProfileActivity extends AppCompatActivity {
                     if (isUpdated) {
                         loadProfileFromCache();
                     }
+                }
+            }
+    );
+
+    // Launcher cho màn hình QR Code
+    private final ActivityResultLauncher<Intent> qrCodeLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            result -> {
+                // Code này chạy khi từ màn hình QR quay về (nếu cần xử lý gì đó)
+                if (result.getResultCode() == RESULT_OK) {
+                    Log.d(TAG, "Đã quay về từ màn hình QR");
                 }
             }
     );
@@ -160,6 +173,12 @@ public class ProfileActivity extends AppCompatActivity {
         editButton.setOnClickListener(v -> {
             Intent intent = new Intent(ProfileActivity.this, EditProfileActivity.class);
             editProfileLauncher.launch(intent);
+        });
+        shareButton.setOnClickListener(v -> {
+            Intent intent = new Intent(ProfileActivity.this, MyQrCodeActivity.class);
+            intent.putExtra("USER_ID", currentUser.getId()); // Thay bằng biến ID thật của bạn
+            intent.putExtra("NAME", currentUser.getName()); // Thay bằng biến tên thật
+            qrCodeLauncher.launch(intent);
         });
 
         logoutButton.setOnClickListener(v -> logout());
@@ -311,10 +330,10 @@ public class ProfileActivity extends AppCompatActivity {
     // ...
 
     private void loadProfileFromCache() {
-        UserResponse cachedUser = userDao.getUser();
-        if (cachedUser != null) {
-            Log.d(TAG, "Loaded from SQLite: " + cachedUser.getName());
-            updateUI(cachedUser);
+        currentUser = userDao.getUser();
+        if (currentUser != null) {
+            Log.d(TAG, "Loaded from SQLite: " + currentUser.getName());
+            updateUI(currentUser);
         } else {
             Log.d(TAG, "SQLite empty -> Waiting for API");
         }
@@ -326,11 +345,11 @@ public class ProfileActivity extends AppCompatActivity {
             @Override
             public void onResponse(Call<UserResponse> call, Response<UserResponse> response) {
                 if (response.isSuccessful() && response.body() != null) {
-                    UserResponse user = response.body().getRealUser();
+                    currentUser = response.body().getRealUser();
 
-                    if (user != null) {
-                        updateUI(user);
-                        userDao.saveUser(user);
+                    if (currentUser != null) {
+                        updateUI(currentUser);
+                        userDao.saveUser(currentUser);
                         Log.d(TAG, "Synced with Server & Saved to SQLite");
                     }
                 }

@@ -11,54 +11,53 @@
         android:id="@+id/headerLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="16dp"
         android:background="@android:color/white"
-        android:elevation="2dp"
+        android:elevation="4dp"
+        android:padding="16dp"
         app:layout_constraintTop_toTopOf="parent">
 
         <ImageView
             android:id="@+id/btn_back"
-            android:layout_width="45dp"
-            android:layout_height="45dp"
-            android:padding="0dp"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
             android:src="@drawable/ic_back_arrow"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+            app:layout_constraintTop_toTopOf="parent"
+            app:tint="#333" />
+
         <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Edit Preference"
-        android:textColor="#FF9800"
-        android:textSize="20sp"
-        android:textStyle="bold"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent" />
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Edit Preference"
+            android:textColor="#FF9800"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
     </androidx.constraintlayout.widget.ConstraintLayout>
 
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:clipToPadding="false"
-        android:paddingHorizontal="24dp"
         android:paddingBottom="100dp"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/headerLayout"
-        app:layout_constraintVertical_bias="1.0"
-        tools:layout_editor_absoluteX="16dp">
+        app:layout_constraintTop_toBottomOf="@id/headerLayout">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:orientation="vertical"
+            android:paddingHorizontal="24dp">
 
             <androidx.cardview.widget.CardView
                 android:layout_width="100dp"
                 android:layout_height="100dp"
                 android:layout_gravity="center_horizontal"
-                android:layout_marginTop="16dp"
+                android:layout_marginTop="24dp"
                 app:cardCornerRadius="50dp"
                 app:cardElevation="0dp">
 
@@ -82,8 +81,7 @@
             <View
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
-                android:layout_marginTop="16dp"
-                android:layout_marginBottom="16dp"
+                android:layout_marginVertical="24dp"
                 android:background="#E0E0E0" />
 
             <TextView
@@ -91,77 +89,35 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp"
                 android:text="Dị ứng và hạn chế"
-                android:textColor="#555"
+                android:textColor="#333"
                 android:textSize="18sp"
                 android:textStyle="bold" />
 
             <GridLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:alignmentMode="alignMargins"
                 android:columnCount="2">
 
-                <CheckBox
-                    style="@style/PreferenceCheckbox"
-                    android:text="Các loại hạt" />
-
-                <CheckBox
-                    style="@style/PreferenceCheckbox"
-                    android:text="Ngũ cốc chứa gluten" />
-
-                <CheckBox
-                    style="@style/PreferenceCheckbox"
-                    android:text="Trứng" />
-
-                <CheckBox
-                    style="@style/PreferenceCheckbox"
-                    android:text="Đậu phộng" />
-
-                <CheckBox
-                    style="@style/PreferenceCheckbox"
-                    android:text="Cá" />
-
-                <CheckBox
-                    style="@style/PreferenceCheckbox"
-                    android:text="Đậu nành" />
-
-                <CheckBox
-                    style="@style/PreferenceCheckbox"
-                    android:text="Sữa" />
-
-                <CheckBox
-                    style="@style/PreferenceCheckbox"
-                    android:text="Mè" />
-
-                <CheckBox
-                    style="@style/PreferenceCheckbox"
-                    android:text="Cần tây" />
-
-                <CheckBox
-                    style="@style/PreferenceCheckbox"
-                    android:text="Mù tạt" />
-
-                <CheckBox
-                    style="@style/PreferenceCheckbox"
-                    android:text="Động vật có vỏ" />
-
-                <CheckBox
-                    style="@style/PreferenceCheckbox"
-                    android:text="Động vật thân mềm" />
-
-                <CheckBox
-                    style="@style/PreferenceCheckbox"
-                    android:text="Cây họ đậu lupin" />
-
-                <CheckBox
-                    style="@style/PreferenceCheckbox"
-                    android:text="Lưu huỳnh dioxide" />
+                <CheckBox style="@style/FixSizeCheckbox" android:text="Các loại hạt" />
+                <CheckBox style="@style/FixSizeCheckbox" android:text="Ngũ cốc chứa gluten" />
+                <CheckBox style="@style/FixSizeCheckbox" android:text="Trứng" />
+                <CheckBox style="@style/FixSizeCheckbox" android:text="Đậu phộng" />
+                <CheckBox style="@style/FixSizeCheckbox" android:text="Cá" />
+                <CheckBox style="@style/FixSizeCheckbox" android:text="Đậu nành" />
+                <CheckBox style="@style/FixSizeCheckbox" android:text="Sữa" />
+                <CheckBox style="@style/FixSizeCheckbox" android:text="Mè" />
+                <CheckBox style="@style/FixSizeCheckbox" android:text="Cần tây" />
+                <CheckBox style="@style/FixSizeCheckbox" android:text="Mù tạt" />
+                <CheckBox style="@style/FixSizeCheckbox" android:text="Động vật có vỏ" />
+                <CheckBox style="@style/FixSizeCheckbox" android:text="Động vật thân mềm" />
+                <CheckBox style="@style/FixSizeCheckbox" android:text="Lupin" />
+                <CheckBox style="@style/FixSizeCheckbox" android:text="Lưu huỳnh dioxide" />
             </GridLayout>
 
             <View
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
-                android:layout_marginVertical="16dp"
+                android:layout_marginVertical="24dp"
                 android:background="#E0E0E0" />
 
             <TextView
@@ -169,7 +125,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp"
                 android:text="Bệnh lý"
-                android:textColor="#555"
+                android:textColor="#333"
                 android:textSize="18sp"
                 android:textStyle="bold" />
 
@@ -178,51 +134,22 @@
                 android:layout_height="wrap_content"
                 android:columnCount="2">
 
-                <CheckBox
-                    style="@style/PreferenceCheckbox"
-                    android:text="Tiểu đường" />
-
-                <CheckBox
-                    style="@style/PreferenceCheckbox"
-                    android:text="Mỡ máu/ Mỡ gan" />
-
-                <CheckBox
-                    style="@style/PreferenceCheckbox"
-                    android:text="Cao huyết áp" />
-
-                <CheckBox
-                    style="@style/PreferenceCheckbox"
-                    android:text="Xương khớp" />
-
-                <CheckBox
-                    style="@style/PreferenceCheckbox"
-                    android:text="Thiếu máu" />
-
-                <CheckBox
-                    style="@style/PreferenceCheckbox"
-                    android:text="Gan/ Thận yếu" />
-
-                <CheckBox
-                    style="@style/PreferenceCheckbox"
-                    android:text="Béo phì" />
-
-                <CheckBox
-                    style="@style/PreferenceCheckbox"
-                    android:text="Dạ dày/ Tiêu hóa" />
-
-                <CheckBox
-                    style="@style/PreferenceCheckbox"
-                    android:text="Hen suyễn" />
-
-                <CheckBox
-                    style="@style/PreferenceCheckbox"
-                    android:text="Gout" />
+                <CheckBox style="@style/FixSizeCheckbox" android:text="Tiểu đường" />
+                <CheckBox style="@style/FixSizeCheckbox" android:text="Mỡ máu/ Mỡ gan" />
+                <CheckBox style="@style/FixSizeCheckbox" android:text="Cao huyết áp" />
+                <CheckBox style="@style/FixSizeCheckbox" android:text="Xương khớp" />
+                <CheckBox style="@style/FixSizeCheckbox" android:text="Thiếu máu" />
+                <CheckBox style="@style/FixSizeCheckbox" android:text="Gan/ Thận yếu" />
+                <CheckBox style="@style/FixSizeCheckbox" android:text="Béo phì" />
+                <CheckBox style="@style/FixSizeCheckbox" android:text="Dạ dày/ Tiêu hóa" />
+                <CheckBox style="@style/FixSizeCheckbox" android:text="Hen suyễn" />
+                <CheckBox style="@style/FixSizeCheckbox" android:text="Gout" />
             </GridLayout>
 
             <View
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
-                android:layout_marginVertical="16dp"
+                android:layout_marginVertical="24dp"
                 android:background="#E0E0E0" />
 
             <TextView
@@ -230,7 +157,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp"
                 android:text="Chế độ ăn"
-                android:textColor="#555"
+                android:textColor="#333"
                 android:textSize="18sp"
                 android:textStyle="bold" />
 
@@ -239,25 +166,11 @@
                 android:layout_height="wrap_content"
                 android:columnCount="2">
 
-                <CheckBox
-                    style="@style/PreferenceCheckbox"
-                    android:text="Bình thường" />
-
-                <CheckBox
-                    style="@style/PreferenceCheckbox"
-                    android:text="Giảm cân" />
-
-                <CheckBox
-                    style="@style/PreferenceCheckbox"
-                    android:text="Chay (có trứng)" />
-
-                <CheckBox
-                    style="@style/PreferenceCheckbox"
-                    android:text="High-protein" />
-
-                <CheckBox
-                    style="@style/PreferenceCheckbox"
-                    android:text="Thuần chay" />
+                <CheckBox style="@style/FixSizeCheckbox" android:text="Bình thường" />
+                <CheckBox style="@style/FixSizeCheckbox" android:text="Giảm cân" />
+                <CheckBox style="@style/FixSizeCheckbox" android:text="Chay (có trứng)" />
+                <CheckBox style="@style/FixSizeCheckbox" android:text="High-protein" />
+                <CheckBox style="@style/FixSizeCheckbox" android:text="Thuần chay" />
             </GridLayout>
 
         </LinearLayout>
@@ -273,7 +186,7 @@
         android:text="Save"
         android:textAllCaps="false"
         android:textColor="@android:color/white"
-        android:textSize="20sp"
+        android:textSize="18sp"
         android:textStyle="bold"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"

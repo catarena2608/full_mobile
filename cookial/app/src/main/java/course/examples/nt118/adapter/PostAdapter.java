@@ -250,6 +250,13 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
             View.OnClickListener detailClick = v -> listener.onPostClicked(post);
             binding.getRoot().setOnClickListener(detailClick);
             binding.ivPostImage.setOnClickListener(detailClick);
+
+            holder.itemView.setOnLongClickListener(v -> {
+                if (listener != null) {
+                    listener.onPostLongClicked(v, post);
+                }
+                return true; // Trả về true để báo là sự kiện đã được xử lý (không kích hoạt onClick thường nữa)
+            });
         }
 
         // --- Helper Methods ---
@@ -297,5 +304,6 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
         void onCommentClicked(Post post);
         void onPostClicked(Post post);
         void onUserClick(String userID); // Thêm hàm này để xem Profile
+        void onPostLongClicked(View view, Post post);
     }
 }
