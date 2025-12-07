@@ -16,7 +16,7 @@ const recipeSchema = new mongoose.Schema(
   {
     _id: { type: String, default: uuidv4 },
     userID: { type: String, required: true },
-    postID: { type: String, ref: "Post" },
+    postID: { type: String, require:true },
     thumbnail: { type: String }, // ảnh thumbnail chính của món ăn
     caption: { type: String }, // caption ngắn
     name: { type: String, required: true }, // tên món

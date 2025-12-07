@@ -6,15 +6,13 @@ import java.util.List;
 public class UserResponse {
 
     // ==========================================
-    // 1. MAPPING ID (SỬA QUAN TRỌNG)
+    // 1. MAPPING ID
     // ==========================================
-    // Server lúc thì trả về "id" (Login), lúc thì "_id" (Profile)
-    // Dùng 'alternate' để bắt cả 2 trường hợp -> Không bao giờ bị null
     @SerializedName(value = "_id", alternate = {"id"})
     private String id;
 
     // ==========================================
-    // 2. CÁC TRƯỜNG DỮ LIỆU
+    // 2. CÁC TRƯỜNG DỮ LIỆU USER (CƠ BẢN)
     // ==========================================
     private String name;
     private String email;
@@ -33,19 +31,41 @@ public class UserResponse {
     private boolean meFollow;
 
     // ==========================================
-    // 3. THỦ THUẬT "SELF-WRAPPER" (Xử lý lồng nhau)
+    // 3. XỬ LÝ API WRAPPER (Thêm mới cho Search)
     // ==========================================
-    // Hứng field "user" nếu JSON trả về dạng { "success": true, "user": {...} }
+
+    // a. Hứng field "user" (API Login/Get Profile trả về { "user": {...} })
     @SerializedName("user")
     private UserResponse nestedUser;
 
-    // Hàm thông minh: Tự động trả về data thật dù server trả về kiểu lồng hay không lồng
+    // b. [MỚI] Hứng field "users" (API Search trả về { "users": [...] })
+    @SerializedName("users")
+    private List<UserResponse> users;
+
+    // c. [MỚI] Hứng field "success" và "total" từ API Search
+    @SerializedName("success")
+    private boolean success;
+
+    @SerializedName("total")
+    private int total;
+
+
+    // ==========================================
+    // 4. HELPER METHODS (Logic thông minh)
+    // ==========================================
+
+    // Hàm lấy User thật: Tự động trả về data dù server trả về lồng hay phẳng
     public UserResponse getRealUser() {
         return nestedUser != null ? nestedUser : this;
     }
 
+    // Hàm lấy List User (cho Search)
+    public List<UserResponse> getListUsers() {
+        return users;
+    }
+
     // ==========================================
-    // 4. GETTERS
+    // 5. GETTERS & SETTERS
     // ==========================================
     public String getId() { return id; }
     public String getName() { return name; }
@@ -58,12 +78,13 @@ public class UserResponse {
     public List<String> getTags() { return tags; }
     public List<String> getLink() { return link; }
     public Preference getPreference() { return preference; }
-
     public boolean isMeFollow() { return meFollow; }
 
-    // ==========================================
-    // 5. SETTERS
-    // ==========================================
+    // Getters mới
+    public boolean isSuccess() { return success; }
+    public int getTotal() { return total; }
+
+    // Setters
     public void setId(String id) { this.id = id; }
     public void setName(String name) { this.name = name; }
     public void setEmail(String email) { this.email = email; }

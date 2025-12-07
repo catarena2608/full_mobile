@@ -25,18 +25,22 @@ import java.util.concurrent.TimeUnit;
 import course.examples.nt118.R;
 import course.examples.nt118.databinding.ItemPostBinding;
 import course.examples.nt118.model.Post;
+import course.examples.nt118.utils.TokenManager; // Cần import để lấy ID người dùng hiện tại
 
 public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder> {
 
-    private static final String TAG = "PostAdapter"; // Thêm TAG để dễ lọc log
+    private static final String TAG = "PostAdapter";
     private List<Post> mListPosts;
     private final PostInteractionListener listener;
     private final Context context;
+    private final String currentUserId; // [MỚI] Lưu ID người dùng hiện tại
 
     public PostAdapter(Context context, PostInteractionListener listener) {
         this.context = context;
         this.listener = listener;
         this.mListPosts = new ArrayList<>();
+        // [MỚI] Lấy ID người dùng để check quyền xóa
+        this.currentUserId = TokenManager.getUserId(context);
     }
 
     @NonNull
@@ -50,7 +54,8 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
     public void onBindViewHolder(@NonNull PostViewHolder holder, int position) {
         Post post = mListPosts.get(position);
         if (post != null) {
-            holder.bind(post);
+            // Truyền thêm currentUserId vào hàm bind
+            holder.bind(post, currentUserId);
         }
     }
 
@@ -76,23 +81,26 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
         return mListPosts;
     }
 
-    // --- HÀM TIỆN ÍCH XỬ LÝ THỜI GIAN TƯƠNG ĐỐI (RELATIVE TIME) ---
+    // [MỚI] Hàm hỗ trợ xóa item khỏi danh sách hiển thị
+    public void removePost(String postId) {
+        if (mListPosts == null) return;
+        for (int i = 0; i < mListPosts.size(); i++) {
+            if (mListPosts.get(i).get_id().equals(postId)) {
+                mListPosts.remove(i);
+                notifyItemRemoved(i);
+                notifyItemRangeChanged(i, mListPosts.size());
+                break;
+            }
+        }
+    }
 
-    /**
-     * Chuyển đổi chuỗi thời gian ISO 8601 (UTC) thành chuỗi thời gian tương đối (ví dụ: "5 phút trước").
-     * @param isoDateTime Chuỗi thời gian từ API (ví dụ: "2025-12-01T11:44:23.473Z")
-     * @return Chuỗi thời gian tương đối
-     */
+    // --- HÀM TIỆN ÍCH XỬ LÝ THỜI GIAN (Giữ nguyên logic của bạn) ---
     public static String getRelativeTimeSpan(String isoDateTime) {
         if (isoDateTime == null || isoDateTime.isEmpty()) return "";
-
-        // 1. Chuẩn bị định dạng: Xử lý cả trường hợp có và không có mili-giây
         SimpleDateFormat isoFormatter;
         if (isoDateTime.contains(".")) {
-            // Có mili-giây (ví dụ: .473Z)
             isoFormatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault());
         } else {
-            // Không có mili-giây (ví dụ: ...:23Z)
             isoFormatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.getDefault());
         }
         isoFormatter.setTimeZone(TimeZone.getTimeZone("UTC"));
@@ -100,56 +108,30 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
         try {
             Date pastDate = isoFormatter.parse(isoDateTime);
             long now = System.currentTimeMillis();
-
-            // Tính khoảng cách
             long difference = now - pastDate.getTime();
 
-            // 2. SỬA LỖI LỆCH GIỜ (Clock Drift)
-            // Nếu bài viết mới đăng nhưng đồng hồ máy user chậm hơn server vài giây
-            // difference sẽ bị âm. Ta coi như là "Vừa xong" nếu lệch dưới 1 phút.
             if (difference < 0) {
-                if (difference > -60000) { // Lệch trong vòng 1 phút tương lai
-                    return "Vừa xong";
-                }
-
-                // Nếu lệch quá xa (tương lai thực sự), hiển thị ngày tháng
+                if (difference > -60000) return "Vừa xong";
                 SimpleDateFormat outputFormatter = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault());
                 return outputFormatter.format(pastDate);
             }
 
-            // Các mốc thời gian cũ
             long seconds = TimeUnit.MILLISECONDS.toSeconds(difference);
-            if (seconds < 60) {
-                return "Vừa xong";
-            }
-
+            if (seconds < 60) return "Vừa xong";
             long minutes = TimeUnit.MILLISECONDS.toMinutes(difference);
-            if (minutes < 60) {
-                return minutes + " phút trước";
-            }
-
+            if (minutes < 60) return minutes + " phút trước";
             long hours = TimeUnit.MILLISECONDS.toHours(difference);
-            if (hours < 24) {
-                return hours + " giờ trước";
-            }
-
+            if (hours < 24) return hours + " giờ trước";
             long days = TimeUnit.MILLISECONDS.toDays(difference);
-            if (days < 7) {
-                return days + " ngày trước";
-            }
-
+            if (days < 7) return days + " ngày trước";
             long weeks = days / 7;
-            if (weeks < 4) {
-                return weeks + " tuần trước";
-            }
+            if (weeks < 4) return weeks + " tuần trước";
 
-            // Quá 1 tháng thì hiện ngày
             SimpleDateFormat outputFormatter = new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault());
             return outputFormatter.format(pastDate);
 
         } catch (ParseException e) {
             e.printStackTrace();
-            // Nếu parse lỗi, trả về chính chuỗi gốc hoặc rỗng để debug
             return "";
         }
     }
@@ -169,11 +151,10 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
             this.context = binding.getRoot().getContext();
         }
 
-        public void bind(Post post) {
+        // [SỬA] Thêm tham số currentUserId
+        public void bind(Post post, String currentUserId) {
             // 1. User Info
-            binding.tvUserName.setText(
-                    post.getUserName() != null ? post.getUserName() : "Người dùng ẩn danh"
-            );
+            binding.tvUserName.setText(post.getUserName() != null ? post.getUserName() : "Người dùng ẩn danh");
 
             if (post.getUserAvatar() != null && !post.getUserAvatar().isEmpty()) {
                 Glide.with(context).load(post.getUserAvatar()).circleCrop().into(binding.ivUserAvatar);
@@ -181,46 +162,26 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
                 binding.ivUserAvatar.setImageResource(R.drawable.ic_launcher_background);
             }
 
-            // Bắt sự kiện click vào User Info
+            // Click User Info -> Profile
+            View.OnClickListener userClick = v -> {
+                if (listener != null) listener.onUserClick(post.getUserID());
+            };
             if (binding.layoutUserInfo != null) {
-                binding.layoutUserInfo.setOnClickListener(v -> {
-                    if (listener != null) {
-                        listener.onUserClick(post.getUserID());
-                    }
-                });
+                binding.layoutUserInfo.setOnClickListener(userClick);
             } else {
-                binding.ivUserAvatar.setOnClickListener(v -> listener.onUserClick(post.getUserID()));
-                binding.tvUserName.setOnClickListener(v -> listener.onUserClick(post.getUserID()));
+                binding.ivUserAvatar.setOnClickListener(userClick);
+                binding.tvUserName.setOnClickListener(userClick);
             }
 
-            // 2. GIỮ NGUYÊN tvUserSubtitle ("Cooking Studio")
-            // Không set gì ở đây để không ghi đè giá trị mặc định của nó.
-
-            // *******************************************************************
-            // 3. Thời gian đăng bài: CHỈ SỬA tvTimeAgo (vị trí cuối bài)
-            // *******************************************************************
+            // 2. Thời gian
             if (binding.tvTimeAgo != null && post.getCreatedAt() != null) {
-
-                // *** LOG TEST QUAN TRỌNG: Kiểm tra xem hàm có được gọi không ***
-                Log.d(TAG, "Đang xử lý Post ID: " + post.get_id() + ", CreatedAt: " + post.getCreatedAt());
-
                 String relativeTime = PostAdapter.getRelativeTimeSpan(post.getCreatedAt());
-
-                if (!relativeTime.isEmpty()) {
-                    binding.tvTimeAgo.setText(relativeTime);
-                    binding.tvTimeAgo.setVisibility(View.VISIBLE);
-                } else {
-                    binding.tvTimeAgo.setText("");
-                    binding.tvTimeAgo.setVisibility(View.GONE);
-                }
-            } else if (binding.tvTimeAgo != null) {
-                // Đảm bảo ẩn đi nếu không có dữ liệu
-                binding.tvTimeAgo.setVisibility(View.GONE);
+                binding.tvTimeAgo.setText(relativeTime);
+                binding.tvTimeAgo.setVisibility(!relativeTime.isEmpty() ? View.VISIBLE : View.GONE);
             }
 
-            // 4. Media (Ảnh bài viết)
+            // 3. Media
             binding.ivPostImage.setVisibility(View.VISIBLE);
-
             if (post.getMedia() != null && !post.getMedia().isEmpty()) {
                 Glide.with(context)
                         .load(post.getMedia().get(0))
@@ -231,13 +192,13 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
                 binding.ivPostImage.setImageResource(R.drawable.ic_launcher_background);
             }
 
-            // 5. Content
-            binding.tvPostCaptionUser.setText(post.getUserName() != null ? post.getUserName() : "Người dùng ẩn danh");
+            // 4. Content & Stats
+            binding.tvPostCaptionUser.setText(post.getUserName() != null ? post.getUserName() : "User");
             binding.tvPostContent.setText(post.getCaption());
             binding.tvLikeCount.setText(String.valueOf(post.getLike()));
             binding.tvCommentCount.setText(String.valueOf(post.getComment()));
 
-            // 6. Tag
+            // 5. Tags
             String postType = post.getType();
             if ("Recipe".equalsIgnoreCase(postType)) {
                 binding.tvPostTag.setText("Công thức");
@@ -249,26 +210,38 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
                 binding.tvPostTag.setVisibility(View.GONE);
             }
 
-            // 7. Button States
+            // 6. Button States
             updateLikeView(binding.btnLike, post.isMeLike());
             updateFollowView(binding.btnFollow, post.isFollowed());
             updateBookmarkView(binding.btnSave, post.isBookmarked());
 
-            // 8. Events
+            // 7. Click Events (Buttons)
             binding.btnLike.setOnClickListener(v -> listener.onLikeClicked(post.get_id(), post.isMeLike()));
-
-            // Click Follow
             binding.btnFollow.setOnClickListener(v -> listener.onFollowClicked(post.getUserID(), post.isFollowed()));
-
             binding.btnSave.setOnClickListener(v -> listener.onBookmarkClicked(post.get_id(), post.isBookmarked()));
             binding.btnComment.setOnClickListener(v -> listener.onCommentClicked(post));
 
+            // Click vào ảnh/body -> Detail
             View.OnClickListener detailClick = v -> listener.onPostClicked(post);
             binding.getRoot().setOnClickListener(detailClick);
             binding.ivPostImage.setOnClickListener(detailClick);
-        }
 
-        // --- Helper Methods ---
+            // ============================================================
+            // 8. [MỚI] LONG CLICK ĐỂ XÓA (Chỉ cho phép nếu là chủ bài viết)
+            // ============================================================
+            if (post.getUserID() != null && post.getUserID().equals(currentUserId)) {
+                binding.getRoot().setOnLongClickListener(v -> {
+                    if (listener != null) {
+                        listener.onPostLongClicked(post, v);
+                        return true; // Đã xử lý sự kiện
+                    }
+                    return false;
+                });
+            } else {
+                // Nếu không phải chủ, hủy sự kiện long click (tránh tái sử dụng viewholder bị lỗi)
+                binding.getRoot().setOnLongClickListener(null);
+            }
+        }
 
         private void updateLikeView(ImageView view, boolean isLiked) {
             if (isLiked) {
@@ -283,14 +256,12 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
         private void updateFollowView(Button view, boolean isFollowed) {
             if (isFollowed) {
                 view.setText("Following");
-                // Nền xám, chữ đen
-                view.setBackgroundColor(0xFFE0E0E0); // Mã màu xám nhạt (hoặc dùng R.color...)
-                view.setTextColor(0xFF000000);       // Chữ đen
+                view.setBackgroundColor(0xFFE0E0E0);
+                view.setTextColor(0xFF000000);
             } else {
                 view.setText("Follow");
-                // Nền cam, chữ trắng
-                view.setBackgroundColor(0xFFFF9800); // Mã màu cam
-                view.setTextColor(0xFFFFFFFF);       // Chữ trắng
+                view.setBackgroundColor(0xFFFF9800);
+                view.setTextColor(0xFFFFFFFF);
             }
         }
 
@@ -305,13 +276,16 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
         }
     }
 
-    // Cập nhật Interface thêm onUserClick
+    // --- INTERFACE ---
     public interface PostInteractionListener {
         void onLikeClicked(String postID, boolean isLiked);
         void onFollowClicked(String userID, boolean isFollowed);
         void onBookmarkClicked(String postID, boolean isBookmarked);
         void onCommentClicked(Post post);
         void onPostClicked(Post post);
-        void onUserClick(String userID); // Thêm hàm này để xem Profile
+        void onUserClick(String userID);
+
+        // [MỚI] Sự kiện nhấn giữ để xóa
+        void onPostLongClicked(Post post, View view);
     }
 }

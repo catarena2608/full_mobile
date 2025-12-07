@@ -6,16 +6,15 @@ const { v4: uuidv4 } = require("uuid");
 const Recipe = require("../models/recipeModel");
 
 const router = express.Router();
-const storage = multer.memoryStorage();
-const upload = multer({ storage });
+const upload = multer({ storage: multer.memoryStorage() });
 
-// 🧩 POST /api/recipe/upload
+// ---------------- POST /api/recipe/upload ----------------
 router.post("/upload", upload.array("media", 50), async (req, res) => {
   try {
-    const userID = req.headers["x-user-id"];
-    if (!userID) {
+    const userID = req.headers["x-user-id"]; // <— fix bug: đúng tên userID
+    if (!userID)
       return res.status(401).json({ message: "Thiếu thông tin user từ Gateway" });
-    }
+
     const {
       caption,
       postID,
@@ -34,14 +33,15 @@ router.post("/upload", upload.array("media", 50), async (req, res) => {
         .json({ success: false, message: "Thiếu thông tin bắt buộc" });
     }
 
-    // 🧠 Parse JSON từ frontend
+    // Parse JSON từ FE
     const parsedIngredients = ingredients ? JSON.parse(ingredients) : {};
     const parsedGuide = guide ? JSON.parse(guide) : [];
     const parsedTags = tags ? JSON.parse(tags) : [];
 
-    // 🖼 Upload tất cả file (ảnh/video) lên Cloudinary
+    // ---------------- Upload file Cloudinary ----------------
     const uploadedUrls = [];
-    if (req.files && req.files.length > 0) {
+
+    if (req.files?.length) {
       for (const file of req.files) {
         const formData = new FormData();
         formData.append("file", file.buffer, file.originalname);
@@ -52,36 +52,23 @@ router.post("/upload", upload.array("media", 50), async (req, res) => {
           formData,
           { headers: formData.getHeaders() }
         );
+
         uploadedUrls.push(cloudRes.data.secure_url);
       }
     }
 
-    // 🧩 Phân bổ file vào thumbnail + guide media
-    // Quy ước frontend: file đầu tiên (nếu có thumbnail) là thumbnail
-    // Còn lại là media của các bước
+    // ---------------- Gán media: thumbnail + guide ----------------
     let fileIndex = 0;
+    const thumbnail = uploadedUrls[fileIndex] || null;
+    if (thumbnail) fileIndex++;
 
-    // Thumbnail
-    const thumbnail = uploadedUrls.length > 0 ? uploadedUrls[fileIndex++] : null;
-
-    // Guide media
     for (const g of parsedGuide) {
-      if (g.media && g.media.length > 0) {
-        const mediaUrls = [];
-
-        for (let i = 0; i < g.media.length; i++) {
-          if (fileIndex < uploadedUrls.length) {
-            mediaUrls.push(uploadedUrls[fileIndex++]);
-          }
-        }
-
-        g.media = mediaUrls; // Gán lại thành mảng URL string
-      } else {
-        g.media = []; // Nếu không có media, gán rỗng để Mongoose không lỗi
-      }
+      const count = Array.isArray(g.media) ? g.media.length : 0;
+      g.media = uploadedUrls.slice(fileIndex, fileIndex + count);
+      fileIndex += count;
     }
 
-    // 📦 Tạo recipe
+    // ---------------- Create Recipe ----------------
     const newRecipe = new Recipe({
       _id: uuidv4(),
       userID,
@@ -113,21 +100,28 @@ router.post("/upload", upload.array("media", 50), async (req, res) => {
     });
   }
 });
-// GET /api/recipe/:postID
+
+// ---------------- GET /api/recipe/:postID ----------------
 router.get("/:postID", async (req, res) => {
   try {
     const { postID } = req.params;
+
     if (!postID)
       return res.status(400).json({ success: false, message: "Thiếu postID" });
 
     const recipe = await Recipe.findOne({ postID });
+
     if (!recipe)
-      return res.status(404).json({ success: false, message: "Không tìm thấy recipe" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Không tìm thấy recipe" });
 
     res.json({ success: true, recipe });
   } catch (err) {
     console.error("❌ Lỗi GET recipe:", err);
-    res.status(500).json({ success: false, message: "Lỗi server", error: err.message });
+    res
+      .status(500)
+      .json({ success: false, message: "Lỗi server", error: err.message });
   }
 });
 

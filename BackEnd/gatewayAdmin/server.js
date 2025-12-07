@@ -6,13 +6,13 @@ const cookieParser = require("cookie-parser");
 
 const checkAdmin = require("./utils/checkAdmin");
 
-// 3 file service map (đều là object)
-const noRequireMap = require("./routes/routes.noRequire"); // e.g. { "/stat/login": "http://localhost:7001" }
-const tokenMap = require("./routes/routes.token");           // object
-const actionMap = require("./routes/routes.action");         // object
+// Route maps
+const noRequireMap = require("./routes/routes.noRequire");
+const tokenMap = require("./routes/routes.token");
+const actionMap = require("./routes/routes.action");
 
-// Gộp tất cả map thành 1 serviceMap
-const serviceMap = Object.assign({}, noRequireMap, tokenMap, actionMap);
+// Gộp map chung
+const serviceMap = { ...noRequireMap, ...tokenMap, ...actionMap };
 
 const app = express();
 
@@ -24,37 +24,21 @@ app.use(
   })
 );
 
-/* -----------------------------------------
-   🔐 MIDDLEWARE PHÂN QUYỀN THEO NHÓM ROUTE
-------------------------------------------*/
+// ------------- APPLY GROUP MIDDLEWARE ----------------
+function applyMiddleware(map, middleware) {
+  Object.keys(map).forEach(prefix => app.use(prefix, middleware));
+}
 
-// 1) Không cần token
-Object.keys(noRequireMap).forEach((prefix) => {
-  app.use(prefix, (req, res, next) => {
-    console.log(`[NoRequire] ${req.originalUrl}`);
-    next();
-  });
+applyMiddleware(noRequireMap, (req, _, next) => {
+  console.log(`[NoRequire] ${req.originalUrl}`);
+  next();
 });
 
-// 2) Cần token nhưng không cần action
-Object.keys(tokenMap).forEach((prefix) => {
-  app.use(prefix, checkAdmin(false), (req, res, next) => {
-    console.log(`[Token] ${req.originalUrl}`);
-    next();
-  });
-});
+applyMiddleware(tokenMap, checkAdmin(false));
+applyMiddleware(actionMap, checkAdmin(true));
 
-// 3) Cần token + yêu cầu action
-Object.keys(actionMap).forEach((prefix) => {
-  app.use(prefix, checkAdmin(true), (req, res, next) => {
-    console.log(`[ActionRequired] ${req.originalUrl}`);
-    next();
-  });
-});
 
-/* -----------------------------------------
-   🔁 PROXY CHUNG
-------------------------------------------*/
+// ----------------------- PROXY ------------------------
 app.use("/", (req, res) => {
   let targetBase = null;
 
@@ -74,36 +58,39 @@ app.use("/", (req, res) => {
 
   console.log(`[Gateway 🚀] ${req.method} ${req.originalUrl} → ${targetUrl.href}`);
 
+  // Clone header (xóa host)
   const headers = { ...req.headers };
   delete headers.host;
 
+  // Inject admin info
   if (req.admin) {
-  headers["x-admin-id"] = req.admin.id;      // <---- FIXED
-  headers["x-admin-action"] = req.admin.action;
-}
+    headers["x-admin-id"] = req.admin.id;
+    headers["x-admin-action"] = req.admin.action;
+  }
 
-  const options = { method: req.method, headers };
-
-  const proxyReq = http.request(targetUrl, options, (proxyRes) => {
-    res.status(proxyRes.statusCode);
-    Object.entries(proxyRes.headers).forEach(([k, v]) => res.setHeader(k, v));
-    proxyRes.pipe(res);
-  });
+  const proxyReq = http.request(
+    targetUrl,
+    { method: req.method, headers },
+    (proxyRes) => {
+      res.writeHead(proxyRes.statusCode, proxyRes.headers);
+      proxyRes.pipe(res);
+    }
+  );
 
   proxyReq.on("error", (err) => {
     console.error(`[Gateway ❌] ${req.method} ${targetUrl.href} → ${err.message}`);
-    if (!res.headersSent) {
+    if (!res.headersSent)
       res.status(502).json({ message: "Lỗi kết nối tới service nội bộ" });
-    }
   });
 
   req.pipe(proxyReq);
 });
 
-// ================== ROOT ==================
+
+// ------------------------ ROOT ------------------------
 app.get("/", (req, res) => res.send("🌐 API Gateway đang hoạt động! 🚀"));
 
-// ================== START ==================
+// ------------------------ START -----------------------
 const PORT = process.env.GATEWAY_PORT || 9000;
 app.listen(PORT, () => {
   console.log(`🚪 Gateway chạy ở http://localhost:${PORT}`);

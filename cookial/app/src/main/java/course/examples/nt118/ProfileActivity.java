@@ -38,67 +38,73 @@ import retrofit2.Response;
 
 public class ProfileActivity extends AppCompatActivity {
 
-    private static final String TAG = ProfileActivity.class.getSimpleName();
+    private static final String TAG = "ProfileActivity";
 
-    // UI Components
+    // --- UI Components ---
     private ImageView coverImageView, profileImageView;
     private TextView nameTextView, handleTextView, linkTextView;
     private TextView postsCountTextView, followersCountTextView, followingCountTextView;
     private AppCompatButton editButton, shareButton, logoutButton;
-    private LinearLayout layoutLink, layoutButtons;
+    private LinearLayout layoutLink;
     private RecyclerView rvProfileImages;
 
-    private UserResponse currentUser;
-
-    // Tabs UI
+    // --- Tabs UI ---
     private LinearLayout tabPosts, tabSaved;
     private TextView tvTabPosts, tvTabSaved;
     private ImageView ivTabPosts, ivTabSaved;
 
-    // Data Caching
+    // --- Data Management ---
     private String myUserId;
     private UserDao userDao;
+    private UserResponse currentUser;
     private ProfilePostAdapter postAdapter;
-    private boolean isShowingSaved = false; // Trạng thái tab hiện tại (false = Posts, true = Saved)
 
-    // *** CACHE DỮ LIỆU ĐỂ TRÁNH GỌI API LẶP LẠI ***
+    // State
+    private boolean isShowingSaved = false; // false = Tab Post, true = Tab Saved
+
+    // Cache Data (Tránh gọi API liên tục khi chuyển Tab)
     private List<Post> myPostsCache = new ArrayList<>();
     private List<Post> savedPostsCache = new ArrayList<>();
 
+    // --- Launchers ---
+
+    // 1. Xử lý kết quả trả về từ EditProfileActivity
     private final ActivityResultLauncher<Intent> editProfileLauncher = registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(),
             result -> {
                 if (result.getResultCode() == RESULT_OK && result.getData() != null) {
+                    // Kiểm tra xem dữ liệu có thay đổi không
                     boolean isUpdated = result.getData().getBooleanExtra("UPDATED", false);
                     if (isUpdated) {
+                        Log.d(TAG, "Profile updated via EditActivity -> Reloading from SQLite");
+                        // CHỈ CẦN LOAD TỪ CACHE (Vì EditActivity đã save vào DB rồi)
                         loadProfileFromCache();
                     }
                 }
             }
     );
 
-    // Launcher cho màn hình QR Code
+    // 2. Launcher cho QR Code (Nếu cần xử lý sau này)
     private final ActivityResultLauncher<Intent> qrCodeLauncher = registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(),
-            result -> {
-                // Code này chạy khi từ màn hình QR quay về (nếu cần xử lý gì đó)
-                if (result.getResultCode() == RESULT_OK) {
-                    Log.d(TAG, "Đã quay về từ màn hình QR");
-                }
-            }
+            result -> { /* Có thể xử lý logic sau khi share QR xong */ }
     );
+
+    // ==================================================================
+    // 1. LIFECYCLE
+    // ==================================================================
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        Log.d(TAG, "1. onCreate");
         setContentView(R.layout.activity_profile);
 
+        // Khởi tạo Core Data
         userDao = new UserDao(this);
         myUserId = TokenManager.getUserId(this);
 
         if (TextUtils.isEmpty(myUserId)) {
-            Toast.makeText(this, "Lỗi đăng nhập", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Phiên đăng nhập không hợp lệ", Toast.LENGTH_SHORT).show();
             finish();
             return;
         }
@@ -108,53 +114,43 @@ public class ProfileActivity extends AppCompatActivity {
         setupListeners();
         setupBottomNavigation();
 
-        // 1. Load Info User
-        loadProfileFromCache();
-        syncProfileWithServer();
+        // 1. Load User Info
+        loadProfileFromCache();     // Hiển thị ngay lập tức từ SQLite
+        syncProfileWithServer();    // Gọi API để cập nhật mới nhất (nếu có khác biệt)
 
-        // 2. Load Dữ liệu cho cả hai tab (Posts và Saved) khi Activity khởi tạo
-        loadAllPostsData();
+        // 2. Load Posts
+        loadAllPostsData();         // Load cả Posts và Saved Posts
     }
 
-    @Override
-    protected void onStart() { super.onStart(); Log.d(TAG, "2. onStart"); }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        Log.d(TAG, "3. onResume");
-    }
-
-    @Override
-    protected void onPause() { super.onPause(); Log.d(TAG, "4. onPause"); }
-
-    @Override
-    protected void onStop() { super.onStop(); Log.d(TAG, "5. onStop"); }
-
-    @Override
-    protected void onRestart() { super.onRestart(); Log.d(TAG, "6. onRestart"); }
-
-    @Override
-    protected void onDestroy() { super.onDestroy(); Log.d(TAG, "7. onDestroy"); }
+    // ==================================================================
+    // 2. INIT & SETUP
+    // ==================================================================
 
     private void initViews() {
+        // Profile Header
         coverImageView = findViewById(R.id.tv_cover);
         profileImageView = findViewById(R.id.iv_avatar);
         nameTextView = findViewById(R.id.tv_name);
         handleTextView = findViewById(R.id.tv_handle);
         linkTextView = findViewById(R.id.tv_link);
         layoutLink = findViewById(R.id.layout_link);
+
+        // Stats
         postsCountTextView = findViewById(R.id.tv_post_count);
         followersCountTextView = findViewById(R.id.tv_followers_count);
         followingCountTextView = findViewById(R.id.tv_following_count);
+
+        // Buttons
         editButton = findViewById(R.id.btn_edit_profile);
         shareButton = findViewById(R.id.btn_share_profile);
         logoutButton = findViewById(R.id.btn_logout);
+
+        // RecyclerView
         rvProfileImages = findViewById(R.id.rv_profile_images);
 
-        // Init Tabs
+        // Tabs
         LinearLayout layoutTabsParent = findViewById(R.id.layout_tabs);
-        tabPosts = (LinearLayout) layoutTabsParent.getChildAt(0);
+        tabPosts = (LinearLayout) layoutTabsParent.getChildAt(0); // Giả sử layout XML đúng thứ tự
         tabSaved = (LinearLayout) layoutTabsParent.getChildAt(1);
 
         ivTabPosts = (ImageView) tabPosts.getChildAt(0);
@@ -165,7 +161,8 @@ public class ProfileActivity extends AppCompatActivity {
 
     private void setupRecyclerView() {
         postAdapter = new ProfilePostAdapter(this, this::openPostDetail);
-        rvProfileImages.setLayoutManager(new GridLayoutManager(this, 3)); // 3 cột
+        // Grid 3 cột chuẩn Instagram style
+        rvProfileImages.setLayoutManager(new GridLayoutManager(this, 3));
         rvProfileImages.setAdapter(postAdapter);
     }
 
@@ -174,168 +171,37 @@ public class ProfileActivity extends AppCompatActivity {
             Intent intent = new Intent(ProfileActivity.this, EditProfileActivity.class);
             editProfileLauncher.launch(intent);
         });
+
         shareButton.setOnClickListener(v -> {
+            if (currentUser == null) return;
             Intent intent = new Intent(ProfileActivity.this, MyQrCodeActivity.class);
-            intent.putExtra("USER_ID", currentUser.getId()); // Thay bằng biến ID thật của bạn
-            intent.putExtra("NAME", currentUser.getName()); // Thay bằng biến tên thật
+            intent.putExtra("USER_ID", currentUser.getId());
+            intent.putExtra("NAME", currentUser.getName());
             qrCodeLauncher.launch(intent);
         });
 
         logoutButton.setOnClickListener(v -> logout());
 
-        // Click Tab Posts: Chỉ chuyển tab nếu không phải tab hiện tại
+        // Tab Switching Logic
         tabPosts.setOnClickListener(v -> {
             if (isShowingSaved) switchTab(false);
         });
 
-        // Click Tab Saved: Chỉ chuyển tab nếu không phải tab hiện tại
         tabSaved.setOnClickListener(v -> {
             if (!isShowingSaved) switchTab(true);
         });
     }
 
-    // --- LOGIC GỌI API LẦN ĐẦU & CACHING ---
-    private void loadAllPostsData() {
-        // Load Posts của tôi
-        loadMyPosts(false);
-        // Load Saved Posts
-        loadSavedPosts(false);
-
-        // Mặc định hiển thị tab Posts (gọi switchTab lần đầu tiên)
-        switchTab(false);
-    }
-
-
-    // --- LOGIC CHUYỂN TAB (CHỈ DÙNG CACHE) ---
-    private void switchTab(boolean showSaved) {
-        isShowingSaved = showSaved;
-
-        // Update UI (Đổi màu tab active)
-        int activeColor = ContextCompat.getColor(this, android.R.color.black);
-        int inactiveColor = ContextCompat.getColor(this, android.R.color.darker_gray);
-
-        if (!showSaved) { // Active Posts
-            ivTabPosts.setColorFilter(activeColor);
-            tvTabPosts.setTextColor(activeColor);
-            tabPosts.setBackgroundResource(R.drawable.bg_outline_orange_box);
-
-            ivTabSaved.setColorFilter(inactiveColor);
-            tvTabSaved.setTextColor(inactiveColor);
-            tabSaved.setBackground(null);
-
-            // Dùng cache đã có
-            postAdapter.setPosts(myPostsCache);
-        } else { // Active Saved
-            ivTabPosts.setColorFilter(inactiveColor);
-            tvTabPosts.setTextColor(inactiveColor);
-            tabPosts.setBackground(null);
-
-            ivTabSaved.setColorFilter(activeColor);
-            tvTabSaved.setTextColor(activeColor);
-            tabSaved.setBackgroundResource(R.drawable.bg_outline_orange_box);
-
-            // Dùng cache đã có
-            postAdapter.setPosts(savedPostsCache);
-        }
-    }
-
-    // --- API CALLS (Cập nhật cache) ---
-
-    // Thêm tham số 'isRefresh' để kiểm soát việc cập nhật UI/cache
-    private void loadMyPosts(boolean isRefresh) {
-        ApiService api = RetrofitClient.getInstance(this).getApiService();
-        api.getPostsByUserID(myUserId).enqueue(new Callback<PostsResponse>() {
-            @Override
-            public void onResponse(Call<PostsResponse> call, Response<PostsResponse> response) {
-                if (response.isSuccessful() && response.body() != null) {
-                    List<Post> rawPosts = response.body().getPosts();
-                    myPostsCache = processRawPosts(rawPosts); // Cập nhật cache
-
-                    if (isRefresh || !isShowingSaved) {
-                        // Nếu đang refresh thủ công HOẶC tab Posts đang hiển thị, cập nhật Adapter
-                        postAdapter.setPosts(myPostsCache);
-                    }
-                } else {
-                    myPostsCache = new ArrayList<>();
-                    if (isRefresh || !isShowingSaved) {
-                        postAdapter.setPosts(new ArrayList<>());
-                    }
-                }
-            }
-            @Override
-            public void onFailure(Call<PostsResponse> call, Throwable t) {
-                // ...
-            }
-        });
-    }
-
-    // Thêm tham số 'isRefresh' để kiểm soát việc cập nhật UI/cache
-    private void loadSavedPosts(boolean isRefresh) {
-        ApiService api = RetrofitClient.getInstance(this).getApiService();
-        api.getSavedPosts().enqueue(new Callback<PostsResponse>() {
-            @Override
-            public void onResponse(Call<PostsResponse> call, Response<PostsResponse> response) {
-                if (response.isSuccessful() && response.body() != null) {
-                    List<Post> rawPosts = response.body().getPosts();
-                    savedPostsCache = processRawPosts(rawPosts); // Cập nhật cache
-
-                    if (isRefresh || isShowingSaved) {
-                        // Nếu đang refresh thủ công HOẶC tab Saved đang hiển thị, cập nhật Adapter
-                        postAdapter.setPosts(savedPostsCache);
-                    }
-                } else {
-                    savedPostsCache = new ArrayList<>();
-                    if (isRefresh || isShowingSaved) {
-                        postAdapter.setPosts(new ArrayList<>());
-                    }
-                }
-            }
-            @Override
-            public void onFailure(Call<PostsResponse> call, Throwable t) {
-                Toast.makeText(ProfileActivity.this, "Lỗi tải bài đã lưu", Toast.LENGTH_SHORT).show();
-            }
-        });
-    }
-    private List<Post> processRawPosts(List<Post> rawPosts) {
-        List<Post> posts = new ArrayList<>();
-        if (rawPosts != null) {
-            for (Post r : rawPosts) {
-                Post p = new Post();
-                p.set_id(r.get_id());
-                p.setMedia(r.getMedia());
-                p.setCaption(r.getCaption());
-                p.setLike(r.getLike());
-                p.setComment(r.getComment());
-                p.setUserID(r.getUserID());
-                posts.add(p);
-            }
-        }
-        return posts;
-    }
-
-    private void openPostDetail(Post post) {
-        Intent intent = new Intent(this, PostDetailActivity.class);
-        intent.putExtra("POST_ID", post.get_id());
-        intent.putExtra("CAPTION", post.getCaption());
-        if (post.getMedia() != null && !post.getMedia().isEmpty()) {
-            intent.putExtra("MEDIA_URL", post.getMedia().get(0));
-        }
-        startActivity(intent);
-    }
-
     // ==================================================================
-    // DATA LOADING (PROFILE INFO)
+    // 3. PROFILE DATA LOGIC (CACHE + SYNC)
     // ==================================================================
-    // ... (Giữ nguyên logic loadProfileFromCache, syncProfileWithServer, updateUI, logout)
-    // ...
 
     private void loadProfileFromCache() {
         currentUser = userDao.getUser();
         if (currentUser != null) {
-            Log.d(TAG, "Loaded from SQLite: " + currentUser.getName());
             updateUI(currentUser);
         } else {
-            Log.d(TAG, "SQLite empty -> Waiting for API");
+            Log.d(TAG, "Cache empty, waiting for API...");
         }
     }
 
@@ -345,19 +211,21 @@ public class ProfileActivity extends AppCompatActivity {
             @Override
             public void onResponse(Call<UserResponse> call, Response<UserResponse> response) {
                 if (response.isSuccessful() && response.body() != null) {
-                    currentUser = response.body().getRealUser();
+                    // Xử lý wrapper (nếu API trả về object bọc realUser)
+                    UserResponse fetchedUser = response.body().getRealUser();
+                    if (fetchedUser == null) fetchedUser = response.body(); // Fallback nếu không có getRealUser
 
-                    if (currentUser != null) {
+                    if (fetchedUser != null) {
+                        currentUser = fetchedUser;
                         updateUI(currentUser);
+                        // Lưu vào SQLite để dùng cho lần sau
                         userDao.saveUser(currentUser);
-                        Log.d(TAG, "Synced with Server & Saved to SQLite");
                     }
                 }
             }
-
             @Override
             public void onFailure(Call<UserResponse> call, Throwable t) {
-                Log.e(TAG, "Sync failed (Offline mode active)", t);
+                Log.e(TAG, "Sync failed, sticking to cache", t);
             }
         });
     }
@@ -365,12 +233,12 @@ public class ProfileActivity extends AppCompatActivity {
     private void updateUI(UserResponse user) {
         if (user == null) return;
 
-        String name = user.getName();
-        if (name != null) {
-            nameTextView.setText(name);
-            handleTextView.setText("@" + name.replaceAll("\\s+", "").toLowerCase());
-        }
+        nameTextView.setText(user.getName());
+        // Tạo handle từ tên (ví dụ: "Nguyen Van A" -> "@nguyenvana")
+        String handle = "@" + (user.getName() != null ? user.getName().replaceAll("\\s+", "").toLowerCase() : "user");
+        handleTextView.setText(handle);
 
+        // Link logic
         if (user.getLink() != null && !user.getLink().isEmpty()) {
             linkTextView.setText(user.getLink().get(0));
             layoutLink.setVisibility(View.VISIBLE);
@@ -378,33 +246,122 @@ public class ProfileActivity extends AppCompatActivity {
             layoutLink.setVisibility(View.GONE);
         }
 
+        // Counts
         postsCountTextView.setText(String.valueOf(user.getNumPosts()));
         followersCountTextView.setText(String.valueOf(user.getNumFollowed()));
         followingCountTextView.setText(String.valueOf(user.getNumFollowing()));
 
+        // Images with Glide
         String avatarUrl = (user.getAvatar() != null && !user.getAvatar().isEmpty())
                 ? user.getAvatar() : "https://i.pravatar.cc/150?u=" + myUserId;
 
-        Glide.with(this).load(avatarUrl).placeholder(R.drawable.chef_hat).circleCrop().into(profileImageView);
+        Glide.with(this)
+                .load(avatarUrl)
+                .placeholder(R.drawable.chef_hat) // Đảm bảo bạn có resource này
+                .circleCrop()
+                .into(profileImageView);
 
-        String coverUrl = (user.getCoverImage() != null && !user.getCoverImage().isEmpty())
-                ? user.getCoverImage() : null;
-
-        if (coverUrl != null) {
-            Glide.with(this).load(coverUrl).centerCrop().into(coverImageView);
+        if (user.getCoverImage() != null && !user.getCoverImage().isEmpty()) {
+            Glide.with(this).load(user.getCoverImage()).centerCrop().into(coverImageView);
         } else {
             coverImageView.setImageResource(android.R.color.darker_gray);
         }
-
-        editButton.setVisibility(View.VISIBLE);
-        logoutButton.setVisibility(View.VISIBLE);
     }
 
+    // ==================================================================
+    // 4. POSTS LOGIC & TABS
+    // ==================================================================
+
+    private void loadAllPostsData() {
+        loadMyPosts();
+        loadSavedPosts();
+        switchTab(false); // Mặc định hiển thị Post của tôi
+    }
+
+    private void switchTab(boolean showSaved) {
+        isShowingSaved = showSaved;
+        updateTabUI(showSaved);
+
+        // Switch data source instantly from Cache
+        if (showSaved) {
+            postAdapter.setPosts(savedPostsCache);
+        } else {
+            postAdapter.setPosts(myPostsCache);
+        }
+    }
+
+    private void updateTabUI(boolean showSaved) {
+        int activeColor = ContextCompat.getColor(this, android.R.color.black);
+        int inactiveColor = ContextCompat.getColor(this, android.R.color.darker_gray);
+
+        // Tab Posts
+        ivTabPosts.setColorFilter(showSaved ? inactiveColor : activeColor);
+        tvTabPosts.setTextColor(showSaved ? inactiveColor : activeColor);
+        tabPosts.setBackgroundResource(showSaved ? 0 : R.drawable.bg_outline_orange_box);
+
+        // Tab Saved
+        ivTabSaved.setColorFilter(showSaved ? activeColor : inactiveColor);
+        tvTabSaved.setTextColor(showSaved ? activeColor : inactiveColor);
+        tabSaved.setBackgroundResource(showSaved ? R.drawable.bg_outline_orange_box : 0);
+    }
+
+    // --- API Fetching ---
+
+    private void loadMyPosts() {
+        RetrofitClient.getInstance(this).getApiService().getPostsByUserID(myUserId).enqueue(new Callback<PostsResponse>() {
+            @Override
+            public void onResponse(Call<PostsResponse> call, Response<PostsResponse> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    myPostsCache = processRawPosts(response.body().getPosts());
+                    // Nếu đang ở tab này thì update UI luôn
+                    if (!isShowingSaved) postAdapter.setPosts(myPostsCache);
+                }
+            }
+            @Override
+            public void onFailure(Call<PostsResponse> call, Throwable t) { Log.e(TAG, "Load My Posts Failed", t); }
+        });
+    }
+
+    private void loadSavedPosts() {
+        RetrofitClient.getInstance(this).getApiService().getSavedPosts().enqueue(new Callback<PostsResponse>() {
+            @Override
+            public void onResponse(Call<PostsResponse> call, Response<PostsResponse> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    savedPostsCache = processRawPosts(response.body().getPosts());
+                    // Nếu đang ở tab này thì update UI luôn
+                    if (isShowingSaved) postAdapter.setPosts(savedPostsCache);
+                }
+            }
+            @Override
+            public void onFailure(Call<PostsResponse> call, Throwable t) { Log.e(TAG, "Load Saved Posts Failed", t); }
+        });
+    }
+
+    // Helper: Chuyển đổi dữ liệu để tránh null safety issues
+    private List<Post> processRawPosts(List<Post> rawPosts) {
+        if (rawPosts == null) return new ArrayList<>();
+        // Clone list để đảm bảo an toàn dữ liệu
+        return new ArrayList<>(rawPosts);
+    }
+
+    private void openPostDetail(Post post) {
+        Intent intent = new Intent(this, PostDetailActivity.class);
+        intent.putExtra("POST_ID", post.get_id());
+        // Truyền thêm dữ liệu cần thiết để hiển thị nhanh
+        startActivity(intent);
+    }
+
+    // ==================================================================
+    // 5. NAVIGATION & LOGOUT
+    // ==================================================================
+
     private void logout() {
+        // 1. Clear Local Data
         userDao.clearUser();
         TokenManager.clearSession(this);
         RetrofitClient.clearCookies(this);
 
+        // 2. Call API Logout (Best effort)
         RetrofitClient.getInstance(this).getApiService().logout().enqueue(new Callback<ResponseBody>() {
             @Override
             public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {}
@@ -412,6 +369,7 @@ public class ProfileActivity extends AppCompatActivity {
             public void onFailure(Call<ResponseBody> call, Throwable t) {}
         });
 
+        // 3. Navigate to Login
         Intent intent = new Intent(ProfileActivity.this, LoginActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         startActivity(intent);
@@ -420,26 +378,23 @@ public class ProfileActivity extends AppCompatActivity {
 
     private void setupBottomNavigation() {
         View navView = findViewById(R.id.bottom_navigation_bar);
-        if (navView != null) {
-            View navHome = navView.findViewById(R.id.nav_home);
-            View navSearch = navView.findViewById(R.id.nav_search);
-            View navAdd = navView.findViewById(R.id.nav_add);
-            View navSaved = navView.findViewById(R.id.nav_saved);
+        if (navView == null) return;
 
-            if (navHome != null) navHome.setOnClickListener(v -> {
-                startActivity(new Intent(this, HomeActivity.class));
-                finish();
-            });
-            if (navSearch != null) navSearch.setOnClickListener(v -> {
-                startActivity(new Intent(this, SearchActivity.class));
-                finish();
-            });
-            if (navAdd != null) navAdd.setOnClickListener(v -> {
-                startActivity(new Intent(this, NewPostActivity.class));
-            });
-            if (navSaved != null) navSaved.setOnClickListener(v -> {
-                startActivity(new Intent(this, SavedPostsActivity.class));
-                finish();
+        // Helper để set click listener gọn hơn
+        setNavListener(navView, R.id.nav_home, HomeActivity.class);
+        setNavListener(navView, R.id.nav_search, SearchActivity.class);
+        setNavListener(navView, R.id.nav_add, NewPostActivity.class);
+        setNavListener(navView, R.id.nav_saved, SavedPostsActivity.class);
+    }
+
+    private void setNavListener(View parent, int id, Class<?> targetActivity) {
+        View view = parent.findViewById(id);
+        if (view != null) {
+            view.setOnClickListener(v -> {
+                startActivity(new Intent(this, targetActivity));
+                if (targetActivity != NewPostActivity.class) {
+                    finish(); // Chỉ finish nếu chuyển sang màn hình chính khác, NewPost thường là activity con
+                }
             });
         }
     }

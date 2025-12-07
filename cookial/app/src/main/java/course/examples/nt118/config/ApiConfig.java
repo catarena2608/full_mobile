@@ -10,7 +10,7 @@ public class ApiConfig {
     private static final String BASE_URL_DEVICE = "http://192.168.1.15:3000/api/";
 
     // 3. Server Production (Vercel/AWS...)
-    private static final String BASE_URL_PRODUCTION = "http://34.124.208.49/api/";
+    private static final String BASE_URL_PRODUCTION = "http://35.247.189.173/api/";
 
     // ==> CHỌN URL HIỆN TẠI Ở ĐÂY <==
     private static final String CURRENT_BASE_URL = BASE_URL_PRODUCTION;

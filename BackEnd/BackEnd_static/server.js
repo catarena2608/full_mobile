@@ -11,6 +11,7 @@ const startConsumer = require("./services/consumer");
 const Admin = require("./models/adminModel");
 const searchRoute = require("./routes/searchRoute");
 const loginRoute = require("./routes/loginRoute");
+const reportRoute = require("./routes/reportRoute");
 
 const app = express();
 app.use(express.json());
@@ -68,6 +69,7 @@ async function startServer() {
     // Routes
     app.use("/stat/login", loginRoute);
     app.use("/stat/search", searchRoute);
+    app.use("/stat/report",reportRoute);
 
     // Start
     app.listen(PORT, () => {

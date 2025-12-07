@@ -2,7 +2,6 @@ package course.examples.nt118;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.text.format.DateUtils;
 import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
@@ -15,206 +14,122 @@ import com.google.gson.JsonSyntaxException;
 
 import org.json.JSONObject;
 
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Locale;
-import java.util.TimeZone;
-
 import course.examples.nt118.adapter.NotificationAdapter;
 import course.examples.nt118.databinding.ActivityNotificationBinding;
 import course.examples.nt118.model.Notify;
-import course.examples.nt118.network.ApiService;
-import course.examples.nt118.network.RetrofitClient;
 import course.examples.nt118.network.SocketClient;
 import course.examples.nt118.utils.TokenManager;
+import io.socket.client.Socket;
 import io.socket.emitter.Emitter;
-import retrofit2.Call;
-import retrofit2.Callback;
-import retrofit2.Response;
 
 public class NotificationActivity extends AppCompatActivity {
 
     private static final String TAG = "NotificationActivity";
     private ActivityNotificationBinding binding;
-
-    private NotificationAdapter adapterToday;
-    private NotificationAdapter adapterEarlier;
-
-    private String userId;
+    private NotificationAdapter adapter; // Dùng 1 adapter duy nhất
     private final Gson gson = new Gson();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        Log.d(TAG, "1. onCreate: Khởi tạo NewRecipePostActivity");
         binding = ActivityNotificationBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
-        // Lấy UserID từ SharedPrefs (TokenManager)
-        userId = TokenManager.getUserId(this);
-
         setupViews();
-        setupRecyclerViews();
+        setupRecyclerView();
 
-        // 1. Gọi API lấy dữ liệu lịch sử (REST API)
-        fetchNotifications();
-
-        // 2. Kích hoạt lắng nghe Socket (Real-time)
+        // KHÔNG GỌI API NỮA
+        // Chỉ kích hoạt lắng nghe Socket
         initSocketListener();
     }
 
-    protected void onStart() { super.onStart(); Log.d(TAG, "2. onStart"); }
-
     @Override
-    protected void onResume() {
-        super.onResume();
-        Log.d(TAG, "3. onResume");
+    protected void onDestroy() {
+        super.onDestroy();
+        // Gỡ listener khi thoát để tránh memory leak
+        Socket socket = SocketClient.getInstance().getSocket();
+        if (socket != null) {
+            socket.off("notify", onNewNotification);
+        }
     }
-
-    @Override
-    protected void onPause() { super.onPause(); Log.d(TAG, "4. onPause"); }
-
-    @Override
-    protected void onStop() { super.onStop(); Log.d(TAG, "5. onStop"); }
-
-    @Override
-    protected void onRestart() { super.onRestart(); Log.d(TAG, "6. onRestart"); }
-
 
     private void setupViews() {
         binding.btnBack.setOnClickListener(v -> finish());
 
-        // Nút "Xem trước đó"
-        binding.btnSeeEarlier.setOnClickListener(v -> {
-            binding.btnSeeEarlier.setVisibility(View.GONE);
-            binding.layoutEarlierNotifications.setVisibility(View.VISIBLE);
-        });
+        // Ẩn các thành phần không dùng đến do không có API lịch sử
+        binding.layoutEarlierNotifications.setVisibility(View.GONE);
+        binding.btnSeeEarlier.setVisibility(View.GONE);
+
+        // Sửa label "Hôm nay" thành "Thông báo mới" hoặc ẩn đi tùy bạn
+        binding.tvTodayLabel.setText("Thông báo trực tiếp");
+        // Mặc định ẩn label đi, có thông báo mới hiện
+        binding.tvTodayLabel.setVisibility(View.GONE);
     }
 
-    private void setupRecyclerViews() {
-        // Adapter cho thông báo hôm nay
-        adapterToday = new NotificationAdapter(this, this::onNotificationClick);
+    private void setupRecyclerView() {
+        // Chỉ setup 1 RecyclerView (rvNotificationsToday) để hứng data socket
+        adapter = new NotificationAdapter(this, this::onNotificationClick);
         binding.rvNotificationsToday.setLayoutManager(new LinearLayoutManager(this));
-        binding.rvNotificationsToday.setAdapter(adapterToday);
-
-        // Adapter cho thông báo cũ hơn
-        adapterEarlier = new NotificationAdapter(this, this::onNotificationClick);
-        binding.rvNotificationsEarlier.setLayoutManager(new LinearLayoutManager(this));
-        binding.rvNotificationsEarlier.setAdapter(adapterEarlier);
-    }
-
-    private void fetchNotifications() {
-        ApiService api = RetrofitClient.getInstance(this).getApiService();
-
-        api.getNotifications(userId).enqueue(new Callback<List<Notify>>() {
-            @Override
-            public void onResponse(Call<List<Notify>> call, Response<List<Notify>> response) {
-                if (response.isSuccessful() && response.body() != null) {
-                    filterNotifications(response.body());
-                } else {
-                    Log.w(TAG, "API Error or Empty: " + response.code());
-                    // Ẩn loading hoặc hiện thông báo trống nếu cần
-                }
-            }
-
-            @Override
-            public void onFailure(Call<List<Notify>> call, Throwable t) {
-                Log.e(TAG, "API Failure", t);
-                Toast.makeText(NotificationActivity.this, "Không thể tải thông báo", Toast.LENGTH_SHORT).show();
-            }
-        });
-    }
-
-    private void filterNotifications(List<Notify> all) {
-        List<Notify> todayList = new ArrayList<>();
-        List<Notify> earlierList = new ArrayList<>();
-
-        for (Notify noti : all) {
-            if (isDateToday(noti.getCreatedAt())) {
-                todayList.add(noti);
-            } else {
-                earlierList.add(noti);
-            }
-        }
-
-        // Cập nhật UI
-        adapterToday.setData(todayList);
-        adapterEarlier.setData(earlierList);
-
-        binding.tvTodayLabel.setVisibility(todayList.isEmpty() ? View.GONE : View.VISIBLE);
-
-        // Logic hiển thị nút "Xem cũ hơn"
-        if (earlierList.isEmpty()) {
-            binding.btnSeeEarlier.setVisibility(View.GONE);
-            binding.layoutEarlierNotifications.setVisibility(View.GONE);
-        } else {
-            binding.btnSeeEarlier.setVisibility(View.VISIBLE);
-        }
+        binding.rvNotificationsToday.setAdapter(adapter);
     }
 
     // ================== SOCKET IO LOGIC ==================
 
     private void initSocketListener() {
-        // Kiểm tra token trước khi connect
-        String token = TokenManager.getTokenFromCookie(this); // Đảm bảo hàm này trả về Raw JWT String
-
-        if (token == null || token.isEmpty()) {
-            Log.e(TAG, "No token found, cannot connect Socket.");
-            return;
+        // 1. Kiểm tra kết nối, nếu chưa thì connect bằng Token từ Cookie
+        if (!SocketClient.getInstance().isConnected()) {
+            // Logic lấy token trực tiếp từ Cookie mà ta đã bàn ở câu trước
+            String token = TokenManager.getTokenFromCookie(this);
+            if (!token.isEmpty()) {
+                SocketClient.getInstance().connect(token);
+            } else {
+                Log.e(TAG, "Không tìm thấy Token trong Cookie!");
+                return;
+            }
         }
 
-        // Nếu chưa kết nối thì kết nối lại
-        if (!SocketClient.isConnected()) {
-            SocketClient.connect(token);
-        }
-
-        // Đăng ký sự kiện
-        if (SocketClient.getSocket() != null) {
-            // Xóa listener cũ để tránh bị duplicate event (nhận 2 lần thông báo)
-            SocketClient.getSocket().off("notify", onNewNotification);
+        // 2. Đăng ký sự kiện
+        Socket socket = SocketClient.getInstance().getSocket();
+        if (socket != null) {
+            // Xóa listener cũ để tránh trùng lặp
+            socket.off("notify", onNewNotification);
 
             // Đăng ký mới
-            SocketClient.getSocket().on("notify", onNewNotification);
-            Log.i(TAG, "✅ Đã đăng ký lắng nghe sự kiện 'notify'");
+            socket.on("notify", onNewNotification);
+            Log.d(TAG, "✅ Đang lắng nghe sự kiện 'notify'...");
         }
     }
 
     /**
-     * Listener xử lý sự kiện real-time
+     * Xử lý khi Server bắn sự kiện 'notify'
      */
     private final Emitter.Listener onNewNotification = args -> {
-        // Socket.IO chạy trên background thread, bắt buộc dùng runOnUiThread để vẽ UI
         runOnUiThread(() -> {
-            if (args.length > 0 && args[0] instanceof JSONObject) {
+            if (args.length > 0) {
                 try {
                     JSONObject data = (JSONObject) args[0];
-                    Log.d(TAG, "📩 Socket Data: " + data.toString());
+                    Log.d(TAG, "📩 Nhận socket: " + data.toString());
 
-                    // Parse JSON sang Object Notify
+                    // Parse JSON sang Object
                     Notify newNoti = gson.fromJson(data.toString(), Notify.class);
 
-                    // Kiểm tra null để tránh crash
-                    if (newNoti == null) return;
+                    if (newNoti != null) {
+                        // Thêm vào đầu danh sách
+                        if (adapter != null) {
+                            adapter.addNotificationToTop(newNoti);
 
-                    // Chỉ thêm vào danh sách "Hôm nay"
-                    if (adapterToday != null) {
-                        // Thêm vào đầu danh sách (index 0)
-                        adapterToday.addNotificationToTop(newNoti);
+                            // Scroll lên đầu
+                            binding.rvNotificationsToday.smoothScrollToPosition(0);
 
-                        // Scroll lên đầu để user thấy
-                        binding.rvNotificationsToday.smoothScrollToPosition(0);
-                          binding.tvTodayLabel.setVisibility(View.VISIBLE);
-
-                        // Có thể hiện thêm 1 Toast nhỏ hoặc rung điện thoại
-                        // Toast.makeText(NotificationActivity.this, "Bạn có thông báo mới!", Toast.LENGTH_SHORT).show();
+                            // Hiện label nếu đây là thông báo đầu tiên
+                            binding.tvTodayLabel.setVisibility(View.VISIBLE);
+                        }
                     }
 
                 } catch (JsonSyntaxException e) {
-                    Log.e(TAG, "Gson Parse Error", e);
+                    Log.e(TAG, "Lỗi format JSON từ Socket", e);
                 } catch (Exception e) {
-                    Log.e(TAG, "Socket Handle Error", e);
+                    Log.e(TAG, "Lỗi xử lý Socket", e);
                 }
             }
         });
@@ -222,44 +137,14 @@ public class NotificationActivity extends AppCompatActivity {
 
     // ================== UTILS ==================
 
-    private boolean isDateToday(String dateString) {
-        if (dateString == null) return false;
-        try {
-            // Format này phải khớp với định dạng server trả về (ISO 8601)
-            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault());
-            sdf.setTimeZone(TimeZone.getTimeZone("UTC")); // Server thường trả về giờ UTC
-
-            Date date = sdf.parse(dateString);
-            if (date != null) {
-                return DateUtils.isToday(date.getTime());
-            }
-        } catch (Exception e) {
-            // Thử format dự phòng nếu server trả về kiểu khác (ít mili giây hơn chẳng hạn)
-            Log.w(TAG, "Date parse warning: " + dateString);
-        }
-        return false;
-    }
-
     private void onNotificationClick(Notify noti) {
-        // Backend trả về field là targetID, hãy chắc chắn getter trong model Notify đúng
-        String postId = noti.getTargetId(); // Hoặc getTargetPostID() tùy model của bạn
+        String targetId = noti.getTargetId();
+        // String type = noti.getType(); // Dùng biến này nếu muốn chia case
 
-        if (postId != null && !postId.isEmpty()) {
+        if (targetId != null) {
             Intent intent = new Intent(this, PostDetailActivity.class);
-            intent.putExtra("POST_ID", postId);
+            intent.putExtra("POST_ID", targetId);
             startActivity(intent);
-        } else {
-            Toast.makeText(this, "Không tìm thấy bài viết liên quan", Toast.LENGTH_SHORT).show();
-        }
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        Log.d(TAG, "7. onDestroy");
-        // Cực kỳ quan trọng: Gỡ listener khi thoát màn hình
-        if (SocketClient.getSocket() != null) {
-            SocketClient.getSocket().off("notify", onNewNotification);
         }
     }
 }

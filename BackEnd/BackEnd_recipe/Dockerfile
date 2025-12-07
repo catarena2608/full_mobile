@@ -1,6 +1,6 @@
 FROM node:18-slim
 
-WORKDIR /app/BackEnd_recipe
+WORKDIR /app/BackEnd_post
 
 COPY package*.json ./
 
@@ -8,6 +8,6 @@ RUN npm install
 
 COPY . .
 # Comment added to force cache bust
-EXPOSE 5001
+EXPOSE 4001
 
 CMD ["node", "server.js"]

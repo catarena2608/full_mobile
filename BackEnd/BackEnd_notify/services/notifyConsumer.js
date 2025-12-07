@@ -1,7 +1,13 @@
 const Notify = require("../models/notifyModel");
-const { getFollowersRPC } = require("../utils/rpcToUser");
-const { getChannel } = require("../config/rabbitmq");
-const { emitToUser } = require("../sockets/socket");
+const {
+  getFollowersRPC
+} = require("../utils/rpcToUser");
+const {
+  getChannel
+} = require("../config/rabbitmq");
+const {
+  emitToUser
+} = require("../sockets/socket");
 
 async function startNotifyConsumer() {
   let channel = getChannel(process.env.RABBITMQ_NOTIFY_QUEUE);
@@ -12,7 +18,9 @@ async function startNotifyConsumer() {
   }
 
   const queueName = process.env.RABBITMQ_NOTIFY_QUEUE || "notification_queue";
-  await channel.assertQueue(queueName, { durable: true });
+  await channel.assertQueue(queueName, {
+    durable: true
+  });
 
   console.log("🐰 Notification Consumer waiting for messages...");
 
@@ -23,12 +31,19 @@ async function startNotifyConsumer() {
       const data = JSON.parse(msg.content.toString());
       console.log("Received event:", data);
 
-      const { actorId, type, targetId, userID } = data;
+      const {
+        actorId,
+        type,
+        targetId,
+        userID
+      } = data;
 
       // ⚡ NEW_POST handling
       if (type === "new_post") {
         console.log("📨 RPC → UserService: get followers");
-        const { followers } = await getFollowersRPC(actorId);
+        const {
+          followers
+        } = await getFollowersRPC(actorId);
         console.log("👥 Followers:", followers);
 
         for (const uid of followers) {
@@ -47,6 +62,27 @@ async function startNotifyConsumer() {
             createdAt: notifyDoc.createdAt
           });
         }
+
+        channel.ack(msg);
+        return;
+      }
+
+      // ⚡ REMOVE_POST
+      if (type === "remove_post") {
+        const notifyDoc = await Notify.create({
+          userID, // chính chủ post
+          actorID: actorId,
+          type: "remove_post",
+          targetID: targetId
+        });
+
+        emitToUser(userID, {
+          _id: notifyDoc._id,
+          type: "remove_post",
+          actorID: actorId,
+          targetID: targetId,
+          createdAt: notifyDoc.createdAt
+        });
 
         channel.ack(msg);
         return;
@@ -86,7 +122,7 @@ async function startNotifyConsumer() {
           _id: notifyDoc1._id,
           type: "comment",
           actorID: actorId,
-          targetID:targetId,
+          targetID: targetId,
           createdAt: notifyDoc1.createdAt
         });
 
@@ -111,21 +147,40 @@ async function startNotifyConsumer() {
         channel.ack(msg);
         return;
       }
+      // ⚡ WARN / BAN
+      if (type.startsWith("warn_") || type.startsWith("ban_")) {
+        const notifyDoc = await Notify.create({
+          userID,
+          actorID: actorId,
+          type, // ví dụ: warn_user
+          targetID: targetId
+        });
 
+        emitToUser(userID, {
+          _id: notifyDoc._id,
+          type,
+          actorID: actorId,
+          targetID: targetId,
+          createdAt: notifyDoc.createdAt
+        });
+
+        channel.ack(msg);
+        return;
+      }
       // ⚡ FOLLOW
       if (type === "follow") {
         const notifyDoc = await Notify.create({
-          userID,     // người được follow
+          userID, // người được follow
           actorID: actorId,
           type: "follow",
-          targetID:targetId
+          targetID: targetId
         });
 
         emitToUser(userID, {
           _id: notifyDoc._id,
           type: "follow",
           actorID: actorId,
-          targetID:targetId,
+          targetID: targetId,
           createdAt: notifyDoc.createdAt
         });
 

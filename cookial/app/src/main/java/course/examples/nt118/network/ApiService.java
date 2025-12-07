@@ -84,6 +84,9 @@ public interface ApiService {
             @Part("location") RequestBody location
     );
 
+    @PATCH("post/delete/{postID}")
+    Call<PostsResponse> deletePost(@Path("postID") String postID);
+
 
     // ================= INTERACTIONS (Like & Save) =================
     @POST("save")
@@ -99,6 +102,7 @@ public interface ApiService {
     Call<ResponseBody> unlikePost(@Body Map<String, String> body);
 
 
+
     // ================= COMMENTS =================
     @GET("comment/{postID}")
     Call<CommentListResponse> getComments(@Path("postID") String postID, @Query("after") String after);
@@ -112,16 +116,17 @@ public interface ApiService {
 
     // ================= USER & PROFILE =================
     @GET("users")
-    Call<ResponseBody> getAllUsers(@Query("userID") String userID);
+    Call<UserResponse> getAllUsers(@Query("userID") String userID);
 
     @GET("users/{id}")
     Call<UserResponse> getUserById(@Path("id") String id, @Query("userID") String currentUserID);
 
     @GET("users/search")
-    Call<ResponseBody> searchUsers(@Query("q") String query, @Query("field") String field);
+    Call<UserResponse> searchUsers(@Query("q") String query, @Query("field") String field);
 
+    // [SỬA] Đổi ResponseBody -> UserResponse
     @GET("users/tag")
-    Call<ResponseBody> searchUsersByTag(@Query("q") String query, @Query("after") String after);
+    Call<UserResponse> searchUsersByTag(@Query("q") String query, @Query("after") String after);
 
     @PATCH("users/profile")
     Call<UserResponse> editProfile(@Body Map<String, Object> body);
@@ -157,10 +162,4 @@ public interface ApiService {
     );
 
     // ================= NOTIFY (Thông báo) =================
-
-    @GET("notify/{userID}")
-    Call<List<Notify>> getNotifications(@Path("userID") String userID);
-
-    @PATCH("notify/{notifyID}/read")
-    Call<ResponseBody> markNotificationRead(@Path("notifyID") String notifyID);
 }

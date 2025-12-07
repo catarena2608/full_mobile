@@ -26,8 +26,8 @@ const postSchema = new mongoose.Schema({
   },
 
   // ✅ Gắn commentSchema vào
-  comment: { type: Number, default:0 }
-
+  comment: { type: Number, default:0 },
+  deleted: { type: Boolean, default: false }
 }, { timestamps: true });
 
 // Tắt ObjectId ảo

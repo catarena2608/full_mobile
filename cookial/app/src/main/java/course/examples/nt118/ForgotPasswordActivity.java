@@ -72,7 +72,7 @@ public class ForgotPasswordActivity extends AppCompatActivity {
 
     private void initViews() {
         emailEditText = findViewById(R.id.emailEditText);
-        sendCodeButton = findViewById(R.id.actionButton); // Nút Send Code
+        sendCodeButton = findViewById(R.id.resetPasswordButton); // Nút Send Code
         backToLoginTextView = findViewById(R.id.backToLoginTextView);
         btnGoogle = findViewById(R.id.btnGoogle);
         btnFacebook = findViewById(R.id.btnFacebook);

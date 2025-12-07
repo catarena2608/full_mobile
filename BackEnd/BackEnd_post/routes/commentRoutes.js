@@ -109,6 +109,18 @@ router.get("/:postID", async (req, res) => {
 router.post("/", async (req, res) => {
   try {
     const userID = req.header("x-user-id"); // 🎯 Lấy userID từ header
+    // 🔥 Check violation (ban post)
+    const { checkViolation } = require("../utils/checkViolation");
+    const result = await checkViolation(userID, "violation_comment");
+
+    if (!result.expired) {
+      return res.status(403).json({
+        success: false,
+        message: "Bạn đang bị cấm đăng bài",
+        expireAt: result.expireAt
+      });
+    }
+
     const { postID, content, reply } = req.body;
 
     if (!userID || !postID || !content) {
@@ -246,6 +258,70 @@ router.delete("/:id", async (req, res) => {
       success: false,
       message: err.message
     });
+  }
+});
+
+// 🧩 POST /api/post/comment/report
+router.post("/report", async (req, res) => {
+  try {
+    const author = req.header("x-user-id");
+    const { target, content } = req.body;
+
+    if (!author || !target) {
+      return res.status(400).json({
+        success: false,
+        message: "Thiếu author (header x-user-id) hoặc target (commentID)"
+      });
+    }
+
+    // 1️⃣ Kiểm tra comment có tồn tại không
+    const existComment = await Comment.findById(target);
+
+    if (!existComment) {
+      return res.status(404).json({
+        success: false,
+        message: "Comment không tồn tại hoặc đã bị xóa!"
+      });
+    }
+    const reportedUser = existComment.userID;
+
+    // 2️⃣ Payload chuẩn gửi sang Static Service
+    const payload = {
+      author,
+      reportedUser,
+      type: "comment",
+      target,
+      content: content || ""
+    };
+
+    // 3️⃣ Gửi message vào RabbitMQ
+    const channel = getChannel();
+    if (!channel) {
+      console.error("❌ Không thể gửi RabbitMQ: Channel chưa có!");
+      return res.status(500).json({
+        success: false,
+        message: "Không thể gửi RabbitMQ"
+      });
+    }
+
+    const QUEUE = process.env.RABBITMQ_STATS_QUEUE || "stats_queue";
+
+    console.log("📤 Sending COMMENT REPORT to RabbitMQ:", payload);
+
+    channel.sendToQueue(
+      QUEUE,
+      Buffer.from(JSON.stringify(payload)),
+      { persistent: true }
+    );
+
+    return res.json({
+      success: true,
+      message: "Report comment đã được gửi vào hàng đợi",
+    });
+
+  } catch (err) {
+    console.error("❌ Lỗi khi gửi report comment:", err);
+    res.status(500).json({ success: false, message: err.message });
   }
 });
 

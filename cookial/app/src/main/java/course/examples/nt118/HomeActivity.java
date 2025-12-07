@@ -1,5 +1,6 @@
 package course.examples.nt118;
 
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
@@ -10,6 +11,7 @@ import android.view.View;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -25,7 +27,7 @@ import java.util.Map;
 import course.examples.nt118.adapter.PostAdapter;
 import course.examples.nt118.databinding.ActivityHomeBinding;
 import course.examples.nt118.model.Post;
-import course.examples.nt118.model.PostsResponse; // Chỉ cần cái này
+import course.examples.nt118.model.PostsResponse;
 import course.examples.nt118.model.UserResponse;
 import course.examples.nt118.network.ApiService;
 import course.examples.nt118.network.RetrofitClient;
@@ -204,7 +206,7 @@ public class HomeActivity extends AppCompatActivity implements PostAdapter.PostI
                         List<Post> processedList = new ArrayList<>();
 
                         for (Post p : rawPosts) {
-                            // Chỉ kiểm tra null cho an toàn, BỎ đoạn check !equals(userId)
+                            // Chỉ kiểm tra null cho an toàn
                             if (p.getUserID() != null) {
                                 // Vẫn cần set placeholder để tránh lỗi hiển thị trong lúc chờ load info user
                                 p.setUserName("Loading...");
@@ -283,9 +285,6 @@ public class HomeActivity extends AppCompatActivity implements PostAdapter.PostI
     // ==================================================================
     // 4. HELPER MAPPING & USER INFO
     // ==================================================================
-
-    // Hàm này không cần nữa vì ta dùng trực tiếp Post, nhưng có thể giữ lại nếu muốn tùy chỉnh thêm
-    // Tuy nhiên, logic gán mặc định đã được đưa vào fetchAllPostsFromServer rồi.
 
     private void fetchUserInfo(Post post) {
         String uid = post.getUserID();
@@ -453,6 +452,77 @@ public class HomeActivity extends AppCompatActivity implements PostAdapter.PostI
             startActivity(intent);
         }
     }
+
+    // ==================================================================
+    // 6. [NEW] DELETE POST FUNCTIONALITY
+    // ==================================================================
+
+    @Override
+    public void onPostLongClicked(Post post, View view) {
+        // Double check ownership locally just in case
+        if (post.getUserID() != null && post.getUserID().equals(userId)) {
+            showDeleteConfirmationDialog(post);
+        }
+    }
+
+    private void showDeleteConfirmationDialog(Post post) {
+        new AlertDialog.Builder(this)
+                .setTitle("Xóa bài viết")
+                .setMessage("Bạn có chắc chắn muốn xóa bài viết này không?")
+                .setPositiveButton("Xóa", (dialog, which) -> {
+                    performDeletePost(post);
+                })
+                .setNegativeButton("Hủy", (dialog, which) -> dialog.dismiss())
+                .show();
+    }
+
+    private void performDeletePost(Post post) {
+        Log.d(TAG, "API: Deleting post " + post.get_id());
+
+        ApiService apiService = RetrofitClient.getInstance(this).getApiService();
+
+        // [SỬA] Dùng Callback<PostsResponse> để khớp với ApiService
+        apiService.deletePost(post.get_id()).enqueue(new Callback<PostsResponse>() {
+            @Override
+            public void onResponse(@NonNull Call<PostsResponse> call, @NonNull Response<PostsResponse> response) {
+                if (response.isSuccessful()) {
+                    Toast.makeText(HomeActivity.this, "Đã xóa bài viết", Toast.LENGTH_SHORT).show();
+
+                    // 1. Xóa khỏi UI Adapter
+                    postAdapter.removePost(post.get_id());
+
+                    // 2. Xóa khỏi bộ nhớ đệm local (để không bị load lại khi scroll)
+                    removeFromBuffer(post.get_id());
+
+                } else {
+                    String errorMsg = "Lỗi khi xóa: " + response.code();
+                    if (response.code() == 403) errorMsg = "Bạn không có quyền xóa bài này";
+                    Toast.makeText(HomeActivity.this, errorMsg, Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onFailure(@NonNull Call<PostsResponse> call, @NonNull Throwable t) {
+                Log.e(TAG, "Delete failed", t);
+                Toast.makeText(HomeActivity.this, "Lỗi kết nối", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void removeFromBuffer(String postId) {
+        for (int i = 0; i < mAllPostsBuffer.size(); i++) {
+            if (mAllPostsBuffer.get(i).get_id().equals(postId)) {
+                mAllPostsBuffer.remove(i);
+                break;
+            }
+        }
+        // Adjust display count since we removed an item
+        if (mCurrentDisplayCount > 0) mCurrentDisplayCount--;
+    }
+
+    // ==================================================================
+    // 7. NAVIGATION & UTILS
+    // ==================================================================
 
     private void openPostDetail(Post post) {
         Intent intent;

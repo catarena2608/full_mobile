@@ -38,6 +38,7 @@ dependencies {
     implementation("io.socket:socket.io-client:2.1.0") {
         exclude(group = "org.json", module = "json") // Corrected the module name from 'json  l'
     }
+    implementation("org.greenrobot:eventbus:3.3.1")
     // --- CORE ANDROID ---
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")
     implementation("com.google.zxing:core:3.4.1")

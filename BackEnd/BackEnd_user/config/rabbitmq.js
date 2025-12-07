@@ -2,7 +2,14 @@ require("dotenv").config();
 const amqp = require("amqplib");
 
 let connection = null;
-const channels = {}; //lưu nhiều channel theo tên queue
+const channels = {};
+
+async function createQueueChannel(queue, prefetch) {
+  const ch = await connection.createChannel();
+  await ch.assertQueue(queue, { durable: true });
+  ch.prefetch(prefetch);
+  channels[queue] = ch;
+}
 
 async function connectRabbitMQ() {
   try {
@@ -12,28 +19,17 @@ async function connectRabbitMQ() {
     connection = await amqp.connect(RABBIT_URL);
     console.log("🐰 RabbitMQ connected (User Service):", RABBIT_URL);
 
-    // Tạo channel cho notification_queue
-    const notifyQueue = process.env.RABBITMQ_NOTIFY_QUEUE || "notification_queue";
-    const notifyChannel = await connection.createChannel();
-    await notifyChannel.assertQueue(notifyQueue, { durable: true });
-    notifyChannel.prefetch(PREFETCH);
-    channels[notifyQueue] = notifyChannel;
+    const queues = [
+      process.env.RABBITMQ_NOTIFY_QUEUE || "notification_queue",
+      process.env.RABBITMQ_USER_QUEUE || "user_followers_queue",
+      process.env.RABBITMQ_USERVIO_QUEUE || "violate_user_queue",
+      process.env.RABBITMQ_STATS_QUEUE || "stats_queue",
+    ];
 
-    // Tạo channel cho queue nhận followers từ User Service
-    const userQueue = process.env.RABBITMQ_USER_QUEUE || "user_followers_queue";
-    const userChannel = await connection.createChannel();
-    await userChannel.assertQueue(userQueue, { durable: true });
-    userChannel.prefetch(PREFETCH);
-    channels[userQueue] = userChannel;
+    for (const q of queues) {
+      await createQueueChannel(q, PREFETCH);
+    }
 
-    // Queue mới cho thống kê
-    const statsQueue = process.env.RABBITMQ_STATS_QUEUE || "stats_queue";
-    const statsChannel = await connection.createChannel();
-    await statsChannel.assertQueue(statsQueue, { durable: true });
-    statsChannel.prefetch(PREFETCH);
-    channels[statsQueue] = statsChannel;
-
-    // reconnect nếu connection bị đóng
     connection.on("close", () => {
       console.error("🔥 User RabbitMQ connection closed. Reconnecting...");
       Object.keys(channels).forEach(k => delete channels[k]);
@@ -46,13 +42,13 @@ async function connectRabbitMQ() {
     });
 
     return channels;
+
   } catch (err) {
     console.error("❌ User RabbitMQ Connection Error:", err.message);
     setTimeout(connectRabbitMQ, 5000);
   }
 }
 
-// Lấy channel theo queue name
 function getChannel(queueName) {
   return channels[queueName];
 }

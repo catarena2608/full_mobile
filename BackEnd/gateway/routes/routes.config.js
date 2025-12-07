@@ -8,8 +8,4 @@ module.exports = {
   "/api/like": "http://backend-post:4001",
   "/api/comment": "http://backend-post:4001",
   "/api/recipe": "http://backend-recipe:5001", // Recipe service
-  "/api/notify": "http://backend-notify:6001", // Recipe service
-
-  // "/api/posts": "http://localhost:3003", // ví dụ sau này nếu có thêm
-  // "/api/comments": "http://localhost:3004",
 };

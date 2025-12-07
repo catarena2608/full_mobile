@@ -21,6 +21,17 @@ router.post("/login", async (req, res) => {
     if (!user)
       return res.status(401).json({ message: "Email không tồn tại" });
 
+ // 🔥 Check Violation trước khi cho login
+const { checkViolation } = require("../utils/checkViolation");
+const result = await checkViolation(user._id, "user");
+
+if (!result.expired) {
+  return res.status(403).json({
+    message: "Tài khoản đang bị ban",
+    expireAt: result.expireAt
+  });
+}
+
     // Nếu password trong DB chưa mã hoá thì so sánh trực tiếp (hoặc dùng bcrypt.compare nếu có hash)
     const isMatch = password === user.password || await bcrypt.compare(password, user.password);
     if (!isMatch)

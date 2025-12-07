@@ -19,6 +19,7 @@
         app:layout_constraintTop_toTopOf="parent">
 
         <ImageView
+            android:id="@+id/iv_searching"
             android:layout_width="30dp"
             android:layout_height="30dp"
             android:layout_marginStart="16dp"
@@ -46,7 +47,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
         android:orientation="horizontal"
-        android:weightSum="4"
+        android:weightSum="3"
         app:layout_constraintTop_toBottomOf="@id/search_bar_container">
 
         <LinearLayout
@@ -105,6 +106,7 @@
             android:gravity="center"
             android:orientation="vertical">
             <TextView
+                android:id="@+id/tv_tab_tag"
                 android:text="Thẻ tag"
                 android:textColor="#757575"
                 android:textSize="13sp"
@@ -112,31 +114,12 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="8dp"/>
             <View
+                android:id="@+id/line_tab_tag"
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
                 android:background="#E0E0E0"/>
         </LinearLayout>
 
-        <LinearLayout
-            android:id="@+id/tab_location"
-            android:onClick="onTabClicked"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:orientation="vertical">
-            <TextView
-                android:text="Địa điểm"
-                android:textColor="#757575"
-                android:textSize="13sp"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp"/>
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:background="#E0E0E0"/>
-        </LinearLayout>
     </LinearLayout>
 
     <TextView

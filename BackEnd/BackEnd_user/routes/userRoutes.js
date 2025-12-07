@@ -204,88 +204,6 @@ router.get("/:id", auth, async (req, res) => {
   }
 });
 
-/* ------------------------- GET USERS BY ADMIN ------------------------- */
-// GET /users/byAdmin?day=&month=&year=&limit=
-router.get("/byAdmin", async (req, res) => {
-  try {
-    const { day, month, year, limit } = req.query;
-
-    let filter = {};
-
-    // Nếu có bất kỳ filter thời gian nào
-    if (day || month || year) {
-      let start = new Date();
-      let end = new Date();
-
-      // Có year
-      if (year) {
-        start = new Date(year, 0, 1);
-        end = new Date(Number(year) + 1, 0, 1);
-      }
-
-      // Có year + month
-      if (year && month) {
-        start = new Date(year, Number(month) - 1, 1);
-        end = new Date(year, Number(month), 1);
-      }
-
-      // Có year + month + day
-      if (year && month && day) {
-        start = new Date(year, Number(month) - 1, Number(day));
-        end = new Date(year, Number(month) - 1, Number(day) + 1);
-      }
-
-      // Nếu chỉ có month → mặc định year hiện tại
-      if (month && !year) {
-        const y = new Date().getFullYear();
-        start = new Date(y, Number(month) - 1, 1);
-        end = new Date(y, Number(month), 1);
-      }
-
-      // Nếu chỉ có day → mặc định tháng + năm hiện tại
-      if (day && !month && !year) {
-        const now = new Date();
-        start = new Date(now.getFullYear(), now.getMonth(), Number(day));
-        end = new Date(now.getFullYear(), now.getMonth(), Number(day) + 1);
-      }
-
-      filter.createdAt = { $gte: start, $lt: end };
-    }
-
-    // Tính limit
-    let queryLimit = 10; // mặc định
-    if (limit === "null" || limit === "0") queryLimit = 0;  // không giới hạn
-    else if (limit) queryLimit = Number(limit);
-
-    // Tổng user khớp filter
-    const total = await User.countDocuments(filter);
-
-    // Query danh sách với limit
-    // Nếu limit = 0 → skip limit
-    let usersQuery = User.find(filter)
-      .select("_id user_name name avatar email numPosts numFollowed numFollowing createdAt tags")
-      .sort({ createdAt: -1 });
-
-    if (queryLimit > 0) {
-      usersQuery = usersQuery.limit(queryLimit);
-    }
-
-    const users = await usersQuery.lean();
-
-    res.json({
-      success: true,
-      total,
-      returned: users.length,
-      filters: { day, month, year, limit: queryLimit },
-      users
-    });
-
-  } catch (err) {
-    console.error("❌ Error in /byAdmin:", err);
-    res.status(500).json({ success: false, message: err.message });
-  }
-});
-
 /* ------------------------- EDIT PROFILE (SELF) -------------------- */
 router.patch("/profile", auth, async (req, res) => {
   try {
@@ -331,6 +249,76 @@ router.patch("/profile", auth, async (req, res) => {
   } catch (err) {
     console.error("❌ Lỗi update profile:", err);
     res.status(500).json({ message: err.message });
+  }
+});
+
+// 🧩 POST /api/user/report
+router.post("/report", async (req, res) => {
+  try {
+    const author = req.header("x-user-id");
+    const { target, content } = req.body;
+
+    if (!author || !target) {
+      return res.status(400).json({
+        success: false,
+        message: "Thiếu author (header x-user-id) hoặc target (userID)"
+      });
+    }
+
+    // 🚫 0️⃣ Không cho tự report chính mình (không cần query DB)
+    if (author.toString() === target.toString()) {
+      return res.status(400).json({
+        success: false,
+        message: "Bạn không thể report chính mình."
+      });
+    }
+
+    // 1️⃣ Kiểm tra user có tồn tại không
+    const existUser = await User.findById(target)
+      .select("_id user_name name")
+      .lean();
+
+    if (!existUser) {
+      return res.status(404).json({
+        success: false,
+        message: "User không tồn tại hoặc đã bị xóa!"
+      });
+    }
+    
+    // 2️⃣ Payload gửi sang Static Service
+    const payload = {
+      author,
+      reportedUser: target,
+      type: "user",
+      target,
+      content: content || ""
+    };
+
+    // 3️⃣ Gửi message vào RabbitMQ
+    const channel = getChannel(STATS_QUEUE);
+    if (!channel) {
+      console.error("❌ Không thể gửi RabbitMQ: Channel chưa có!");
+      return res.status(500).json({
+        success: false,
+        message: "Không thể gửi message vào RabbitMQ"
+      });
+    }
+
+    console.log("📤 Sending USER REPORT to RabbitMQ:", payload);
+    channel.sendToQueue(
+      STATS_QUEUE,
+      Buffer.from(JSON.stringify(payload)),
+      { persistent: true }
+    );
+
+    return res.json({
+      success: true,
+      message: "Report user đã được gửi vào hàng đợi"
+    });
+
+  } catch (err) {
+    console.error("❌ Lỗi report user:", err);
+    return res.status(500).json({ success: false, message: err.message });
   }
 });
 

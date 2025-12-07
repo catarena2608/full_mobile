@@ -8,6 +8,7 @@ require("dotenv").config();
 const {
   connectRabbitMQ
 } = require("./config/rabbitmq");
+const normalizeDates= require("./utils/normalize");
 
 const postRoutes = require("./routes/postRoutes");
 const saveRoutes = require("./routes/saveRoutes");
@@ -22,6 +23,8 @@ const Post = require("./models/postModel");
 const Save = require("./models/saveModel");
 const Like = require("./models/likeModel");
 const Comment = require("./models/commentModel");
+
+const startConsumer = require("./services/consumer");
 
 const app = express();
 
@@ -48,8 +51,8 @@ mongoose.connect(process.env.MONGO_URI)
     const postFile = "./backups/postdb.posts.json";
     if (fs.existsSync(postFile)) {
       const rawData = fs.readFileSync(postFile);
-      const posts = JSON.parse(rawData);
-
+      let posts = JSON.parse(rawData);
+      posts = normalizeDates(posts);
       const count = await Post.countDocuments();
       if (count === 0 && posts.length > 0) {
         await Post.insertMany(posts);
@@ -67,8 +70,8 @@ mongoose.connect(process.env.MONGO_URI)
     const likeFile = "./backups/postdb.like.json";
     if (fs.existsSync(likeFile)) {
       const rawData = fs.readFileSync(likeFile);
-      const likes = JSON.parse(rawData);
-
+      let likes = JSON.parse(rawData);
+      likes = normalizeDates(likes);
       const count = await Like.countDocuments();
       if (count === 0 && likes.length > 0) {
         await Like.insertMany(likes);
@@ -162,7 +165,8 @@ mongoose.connect(process.env.MONGO_URI)
     // ------------------- IMPORT COMMENTS -------------------
     const commentFile = "./backups/postdb.comment.json";
     if (fs.existsSync(commentFile)) {
-      const comments = JSON.parse(fs.readFileSync(commentFile));
+      let comments = JSON.parse(fs.readFileSync(commentFile));
+      comments = normalizeDates(comments);
       const count = await Comment.countDocuments();
       if (count === 0 && comments.length > 0) {
         await Comment.insertMany(comments);
@@ -176,8 +180,8 @@ mongoose.connect(process.env.MONGO_URI)
 
     if (fs.existsSync(saveFile)) {
       const rawData = fs.readFileSync(saveFile);
-      const saves = JSON.parse(rawData);
-
+      let saves = JSON.parse(rawData);
+      saves = normalizeDates(saves);
       const count = await Save.countDocuments();
 
       if (count === 0 && saves.length > 0) {
@@ -201,6 +205,7 @@ mongoose.connect(process.env.MONGO_URI)
 
     await connectRabbitMQ();
     console.log("🐰 Connected to RabbitMQ.");
+    await startConsumer();
     // -------------------
     // Start server
     // -------------------
