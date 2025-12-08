@@ -178,11 +178,9 @@ router.get("/saved", async (req, res) => {
     const postIDs = saves.map((s) => s.postID);
 
     const posts = await Post.find({
-        _id: {
-          $in: postIDs,
-          deleted: false
-        }
-      })
+      _id: { $in: postIDs },
+        deleted: false
+    })
       .sort({
         createdAt: -1
       })
