@@ -34,7 +34,7 @@ public class RegisterActivity extends AppCompatActivity {
     private EditText nameEditText,usernameEditText, emailEditText, passwordEditText, confirmPasswordEditText;
     private Button registerButton;
     private TextView signInTextView;
-    private LinearLayout btnGoogle, btnFacebook;
+
 
     // =========================================================================
     // 1. LIFECYCLE LOGS (Để theo dõi vòng đời Activity)
@@ -82,8 +82,6 @@ public class RegisterActivity extends AppCompatActivity {
         confirmPasswordEditText = findViewById(R.id.confirmPasswordEditText);
         registerButton = findViewById(R.id.signUpButton);
         signInTextView = findViewById(R.id.signInTextView);
-        btnGoogle = findViewById(R.id.btnGoogle);
-        btnFacebook = findViewById(R.id.btnFacebook);
     }
 
     private void setupListeners() {
@@ -95,9 +93,6 @@ public class RegisterActivity extends AppCompatActivity {
             Log.d(TAG, "User click: Social Login (Feature pending)");
             Toast.makeText(this, "Tính năng đang phát triển", Toast.LENGTH_SHORT).show();
         };
-
-        btnGoogle.setOnClickListener(socialListener);
-        btnFacebook.setOnClickListener(socialListener);
     }
 
     // =========================================================================
@@ -125,6 +120,7 @@ public class RegisterActivity extends AppCompatActivity {
 
         Map<String, Object> body = new HashMap<>();
         body.put("name", name);
+        body.put("user_name", username);
         body.put("email", email);
         body.put("password", password);
         // Random avatar demo

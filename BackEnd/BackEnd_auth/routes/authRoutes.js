@@ -79,7 +79,7 @@ router.post("/register", async (req, res) => {
   try {
     const { name,user_name, email, password, avatar, coverImage } = req.body;
 
-    if (!name ||!user_name ||!email || !password || !avatar) {
+    if (!name ||!user_name ||!email || !password) {
       return res.status(400).json({ message: "Missing fields" });
     }
 
