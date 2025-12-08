@@ -1,20 +1,18 @@
 package course.examples.nt118;
 
 import android.Manifest;
-import android.content.Context;
 import android.content.Intent;
-import android.database.Cursor;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.MediaStore;
-import android.text.TextUtils;
+import android.util.Base64;
 import android.util.Log;
-import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
-import android.widget.ProgressBar;
 import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
@@ -23,11 +21,8 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.bumptech.glide.Glide;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -35,9 +30,6 @@ import course.examples.nt118.model.UserResponse;
 import course.examples.nt118.network.ApiService;
 import course.examples.nt118.network.RetrofitClient;
 import course.examples.nt118.utils.TokenManager;
-import okhttp3.MediaType;
-import okhttp3.MultipartBody;
-import okhttp3.RequestBody;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -47,48 +39,61 @@ public class EditProfileActivity extends AppCompatActivity {
     private static final String TAG = "EditProfileActivity";
 
     // --- Views ---
-    private ImageView avatarImageView, backButton;
-    private EditText nameEditText, emailEditText, linkEditText, usernameEditText;
+    private ImageView avatarImageView, coverImageView, backButton;
+    private EditText nameEditText, emailEditText, linkEditText;
     private Button saveButton, preferenceButton;
-    // (Optional) Thêm ProgressBar vào layout XML của bạn để UX tốt hơn
-    // private ProgressBar loadingProgressBar;
 
     // --- Data ---
     private String userId;
-    private Uri selectedAvatarUri = null;
-    private File selectedAvatarFile = null; // File thực tế để upload
     private ApiService apiService;
 
-    // --- Launchers ---
-    // 1. Launcher chọn ảnh
+    // Ảnh Avatar
+    private Uri selectedAvatarUri = null;
+
+    // Ảnh Bìa
+    private Uri selectedCoverUri = null;
+
+    // Cờ kiểm tra đang chọn ảnh nào (true = avatar, false = cover)
+    private boolean isPickingAvatar = true;
+
+    // ==================================================================
+    // LAUNCHERS
+    // ==================================================================
+
+    // 1. Launcher chọn ảnh từ thư viện
     private final ActivityResultLauncher<Intent> pickImageLauncher = registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(),
             result -> {
                 if (result.getResultCode() == RESULT_OK && result.getData() != null) {
-                    selectedAvatarUri = result.getData().getData();
-                    if (selectedAvatarUri != null) {
-                        displayAvatar(selectedAvatarUri);
-                        // Chuyển Uri thành File để sẵn sàng upload
-                        selectedAvatarFile = getFileFromUri(selectedAvatarUri);
+                    Uri uri = result.getData().getData();
+                    if (uri != null) {
+                        if (isPickingAvatar) {
+                            // Xử lý Avatar
+                            selectedAvatarUri = uri;
+                            // Hiển thị tròn
+                            Glide.with(this).load(uri).circleCrop().into(avatarImageView);
+                        } else {
+                            // Xử lý Cover Photo
+                            selectedCoverUri = uri;
+                            // Hiển thị chữ nhật (centerCrop)
+                            Glide.with(this).load(uri).centerCrop().into(coverImageView);
+                        }
                     }
                 }
             }
     );
 
-    // 2. Launcher xin quyền (Android 13+ vs Old Android)
+    // 2. Launcher xin quyền
     private final ActivityResultLauncher<String> requestPermissionLauncher = registerForActivityResult(
             new ActivityResultContracts.RequestPermission(),
             isGranted -> {
-                if (isGranted) {
-                    openGallery();
-                } else {
-                    Toast.makeText(this, "Bạn cần cấp quyền để đổi ảnh đại diện", Toast.LENGTH_SHORT).show();
-                }
+                if (isGranted) openGallery();
+                else Toast.makeText(this, "Cần cấp quyền để chọn ảnh", Toast.LENGTH_SHORT).show();
             }
     );
 
     // ==================================================================
-    // 1. LIFECYCLE
+    // LIFECYCLE
     // ==================================================================
 
     @Override
@@ -96,10 +101,8 @@ public class EditProfileActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_edit_profile);
 
-        // Kiểm tra Token/User hợp lệ
-        if (!validateUserSession()) return;
-
-        // Khởi tạo API
+        // Lấy UserID
+        userId = TokenManager.getUserId(this);
         apiService = RetrofitClient.getInstance(this).getApiService();
 
         initViews();
@@ -107,70 +110,60 @@ public class EditProfileActivity extends AppCompatActivity {
         loadCurrentUserProfile();
     }
 
-    // ==================================================================
-    // 2. INITIALIZATION & SETUP
-    // ==================================================================
-
-    private boolean validateUserSession() {
-        userId = TokenManager.getUserId(this);
-        if (TextUtils.isEmpty(userId)) {
-            Toast.makeText(this, "Phiên đăng nhập hết hạn", Toast.LENGTH_SHORT).show();
-            // Điều hướng về Login nếu cần
-            finish();
-            return false;
-        }
-        return true;
-    }
-
     private void initViews() {
         avatarImageView = findViewById(R.id.iv_avatar);
-        backButton = findViewById(R.id.btn_back);
+        coverImageView = findViewById(R.id.iv_cover_photo); // Ảnh bìa
+
         nameEditText = findViewById(R.id.et_name);
         emailEditText = findViewById(R.id.et_email);
         linkEditText = findViewById(R.id.et_link);
+
         saveButton = findViewById(R.id.btn_save);
+        backButton = findViewById(R.id.btn_back);
         preferenceButton = findViewById(R.id.btn_preference);
 
-        // Disable các trường không cho sửa
+        // Không cho sửa email
         if (emailEditText != null) emailEditText.setEnabled(false);
-        if (usernameEditText != null) usernameEditText.setEnabled(false);
     }
 
     private void setupListeners() {
         backButton.setOnClickListener(v -> finish());
 
-        preferenceButton.setOnClickListener(v -> {
-            Intent intent = new Intent(EditProfileActivity.this, EditPreferenceActivity.class);
-            startActivity(intent);
+        // Click Avatar
+        avatarImageView.setOnClickListener(v -> {
+            isPickingAvatar = true;
+            checkPermissionAndPickImage();
         });
 
-        avatarImageView.setOnClickListener(v -> checkPermissionAndPickImage());
+        // Click Cover Photo
+        coverImageView.setOnClickListener(v -> {
+            isPickingAvatar = false;
+            checkPermissionAndPickImage();
+        });
 
-        saveButton.setOnClickListener(v -> handleSaveProfile());
+        // Click Save -> Gọi hàm xử lý JSON
+        saveButton.setOnClickListener(v -> handleSaveProfileJSON());
+
+        preferenceButton.setOnClickListener(v -> {
+            startActivity(new Intent(this, EditPreferenceActivity.class));
+        });
     }
 
     // ==================================================================
-    // 3. LOGIC: LOAD DATA
+    // LOGIC LOAD DATA
     // ==================================================================
 
     private void loadCurrentUserProfile() {
-        setLoadingState(true);
         apiService.getUserById(userId, userId).enqueue(new Callback<UserResponse>() {
             @Override
             public void onResponse(Call<UserResponse> call, Response<UserResponse> response) {
-                setLoadingState(false);
                 if (response.isSuccessful() && response.body() != null) {
                     populateUserData(response.body());
-                } else {
-                    showError("Không thể tải thông tin: " + response.code());
                 }
             }
-
             @Override
             public void onFailure(Call<UserResponse> call, Throwable t) {
-                setLoadingState(false);
-                Log.e(TAG, "Load Profile Error", t);
-                showError("Lỗi kết nối server");
+                Log.e(TAG, "Load Error", t);
             }
         });
     }
@@ -179,157 +172,142 @@ public class EditProfileActivity extends AppCompatActivity {
         nameEditText.setText(user.getName());
         if (emailEditText != null) emailEditText.setText(user.getEmail());
 
-        // Xử lý link (nếu là List thì lấy phần tử đầu, nếu String thì lấy trực tiếp)
         if (user.getLink() != null && !user.getLink().isEmpty()) {
             linkEditText.setText(user.getLink().get(0));
         }
 
-        // Hiển thị Avatar từ URL
-        String avatarUrl = (user.getAvatar() != null && !user.getAvatar().isEmpty())
-                ? user.getAvatar()
-                : "https://ui-avatars.com/api/?name=" + user.getName(); // Fallback image thông minh hơn
-
+        // Load Avatar
         Glide.with(this)
-                .load(avatarUrl)
-                .placeholder(R.drawable.ic_launcher_background) // Nên có placeholder
+                .load(user.getAvatar())
+                .placeholder(R.drawable.ic_launcher_background)
                 .circleCrop()
                 .into(avatarImageView);
+
+        // Load Cover Photo (Giả sử getter là getCover_photo)
+        Glide.with(this)
+                .load(user.getCoverImage())
+                .placeholder(android.R.color.darker_gray)
+                .centerCrop()
+                .into(coverImageView);
     }
 
     // ==================================================================
-    // 4. LOGIC: UPDATE PROFILE
+    // LOGIC SAVE (JSON BODY) - QUAN TRỌNG
     // ==================================================================
 
-    private void handleSaveProfile() {
-        String newName = nameEditText.getText().toString().trim();
-        String newLink = linkEditText.getText().toString().trim();
+    private void handleSaveProfileJSON() {
+        String name = nameEditText.getText().toString().trim();
+        String link = linkEditText.getText().toString().trim();
 
-        if (newName.isEmpty()) {
-            showError("Tên hiển thị không được để trống");
+        if (name.isEmpty()) {
+            Toast.makeText(this, "Tên không được để trống", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        // TODO: Logic phân chia
-        // Trường hợp 1: Backend chỉ nhận JSON (Code hiện tại)
-        updateProfileJson(newName, newLink);
+        saveButton.setText("Đang lưu...");
+        saveButton.setEnabled(false);
 
-        // Trường hợp 2: Backend nhận Multipart (Có upload ảnh)
-        // Nếu selectedAvatarFile != null -> gọi hàm uploadMultipart(newName, newLink, selectedAvatarFile);
-    }
-
-    private void updateProfileJson(String name, String link) {
-        setLoadingState(true);
-
+        // 1. Tạo Map chứa dữ liệu JSON
         Map<String, Object> body = new HashMap<>();
         body.put("name", name);
         body.put("link", link);
-        // Lưu ý: Nếu backend yêu cầu link là mảng, hãy dùng: Collections.singletonList(link)
+        // Nếu backend yêu cầu link là mảng: body.put("link", Collections.singletonList(link));
 
+        // 2. Chuyển đổi Avatar sang Base64 (Nếu có chọn mới)
+        if (selectedAvatarUri != null) {
+            String base64Avatar = encodeImageToBase64(selectedAvatarUri);
+            if (base64Avatar != null) {
+                body.put("avatar", base64Avatar); // Key phải khớp backend
+            }
+        }
+
+        // 3. Chuyển đổi Cover Photo sang Base64 (Nếu có chọn mới)
+        if (selectedCoverUri != null) {
+            String base64Cover = encodeImageToBase64(selectedCoverUri);
+            if (base64Cover != null) {
+                body.put("cover_photo", base64Cover); // Key phải khớp backend
+            }
+        }
+
+        // 4. Gọi API với Body Map
         apiService.editProfile(body).enqueue(new Callback<UserResponse>() {
             @Override
             public void onResponse(Call<UserResponse> call, Response<UserResponse> response) {
-                setLoadingState(false);
+                saveButton.setText("Save");
+                saveButton.setEnabled(true);
+
                 if (response.isSuccessful()) {
                     Toast.makeText(EditProfileActivity.this, "Cập nhật thành công!", Toast.LENGTH_SHORT).show();
-
-                    // Trả kết quả về để màn hình trước reload
-                    Intent resultIntent = new Intent();
-                    resultIntent.putExtra("UPDATED", true);
-                    setResult(RESULT_OK, resultIntent);
-
+                    setResult(RESULT_OK);
                     finish();
                 } else {
-                    showError("Cập nhật thất bại: " + response.message());
+                    Toast.makeText(EditProfileActivity.this, "Lỗi Server: " + response.code(), Toast.LENGTH_SHORT).show();
                 }
             }
 
             @Override
             public void onFailure(Call<UserResponse> call, Throwable t) {
-                setLoadingState(false);
-                Log.e(TAG, "Update Error", t);
-                showError("Lỗi kết nối khi cập nhật");
+                saveButton.setText("Save");
+                saveButton.setEnabled(true);
+                Log.e(TAG, "API Failure", t);
+                Toast.makeText(EditProfileActivity.this, "Lỗi kết nối mạng", Toast.LENGTH_SHORT).show();
             }
         });
     }
 
-    /* // --- SAMPLE MULTIPART CODE (Dùng khi backend hỗ trợ upload ảnh) ---
-    private void uploadMultipart(String name, String link, File file) {
-        RequestBody namePart = RequestBody.create(MediaType.parse("text/plain"), name);
-        RequestBody linkPart = RequestBody.create(MediaType.parse("text/plain"), link);
+    // ==================================================================
+    // UTILS: CONVERT IMAGE TO BASE64
+    // ==================================================================
 
-        MultipartBody.Part avatarPart = null;
-        if (file != null) {
-            RequestBody requestFile = RequestBody.create(MediaType.parse("image/*"), file);
-            avatarPart = MultipartBody.Part.createFormData("avatar", file.getName(), requestFile);
+    private String encodeImageToBase64(Uri imageUri) {
+        try {
+            InputStream inputStream = getContentResolver().openInputStream(imageUri);
+            Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
+
+            // Resize ảnh nếu quá to để tránh lỗi OutOfMemory hoặc quá tải Payload
+            // Ví dụ: Giới hạn kích thước khoảng 800x800 pixel
+            bitmap = getResizedBitmap(bitmap, 800);
+
+            ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+            // Nén ảnh sang JPEG, chất lượng 80%
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 80, byteArrayOutputStream);
+            byte[] byteArray = byteArrayOutputStream.toByteArray();
+
+            // Trả về chuỗi Base64
+            // Dùng NO_WRAP để tránh xuống dòng trong chuỗi JSON
+            return "data:image/jpeg;base64," + Base64.encodeToString(byteArray, Base64.NO_WRAP);
+
+        } catch (Exception e) {
+            Log.e(TAG, "Lỗi convert ảnh sang Base64", e);
+            return null;
         }
-
-        // Cần thêm method editProfileMultipart trong ApiService
-        apiService.editProfileMultipart(namePart, linkPart, avatarPart)...
     }
-    */
 
-    // ==================================================================
-    // 5. IMAGE & PERMISSION UTILS
-    // ==================================================================
+    // Hàm phụ trợ để resize ảnh nhỏ lại
+    private Bitmap getResizedBitmap(Bitmap image, int maxSize) {
+        int width = image.getWidth();
+        int height = image.getHeight();
+
+        float bitmapRatio = (float) width / (float) height;
+        if (bitmapRatio > 1) {
+            width = maxSize;
+            height = (int) (width / bitmapRatio);
+        } else {
+            height = maxSize;
+            width = (int) (height * bitmapRatio);
+        }
+        return Bitmap.createScaledBitmap(image, width, height, true);
+    }
 
     private void checkPermissionAndPickImage() {
-        String permission;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            permission = Manifest.permission.READ_MEDIA_IMAGES;
-        } else {
-            permission = Manifest.permission.READ_EXTERNAL_STORAGE;
-        }
+        String permission = (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
+                ? Manifest.permission.READ_MEDIA_IMAGES
+                : Manifest.permission.READ_EXTERNAL_STORAGE;
         requestPermissionLauncher.launch(permission);
     }
 
     private void openGallery() {
         Intent intent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
         pickImageLauncher.launch(intent);
-    }
-
-    private void displayAvatar(Uri uri) {
-        Glide.with(this)
-                .load(uri)
-                .circleCrop()
-                .into(avatarImageView);
-    }
-
-    // Helper: Chuyển Uri thành File (Quan trọng cho Android 10+)
-    private File getFileFromUri(Uri uri) {
-        try {
-            // Tạo file tạm trong cache của app
-            File tempFile = File.createTempFile("avatar_upload", ".jpg", getCacheDir());
-            tempFile.deleteOnExit();
-
-            try (InputStream inputStream = getContentResolver().openInputStream(uri);
-                 OutputStream outputStream = new FileOutputStream(tempFile)) {
-                if (inputStream == null) return null;
-
-                byte[] buffer = new byte[4 * 1024]; // 4KB buffer
-                int read;
-                while ((read = inputStream.read(buffer)) != -1) {
-                    outputStream.write(buffer, 0, read);
-                }
-                outputStream.flush();
-            }
-            return tempFile;
-        } catch (IOException e) {
-            Log.e(TAG, "Lỗi tạo file tạm", e);
-            return null;
-        }
-    }
-
-    // ==================================================================
-    // 6. UI HELPERS
-    // ==================================================================
-
-    private void setLoadingState(boolean isLoading) {
-        saveButton.setEnabled(!isLoading);
-        saveButton.setText(isLoading ? "Đang lưu..." : "Lưu thay đổi");
-        // Nếu có ProgressBar: loadingProgressBar.setVisibility(isLoading ? View.VISIBLE : View.GONE);
-    }
-
-    private void showError(String message) {
-        Toast.makeText(this, message, Toast.LENGTH_LONG).show();
     }
 }

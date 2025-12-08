@@ -1,5 +1,6 @@
 package course.examples.nt118;
 
+import android.app.AlertDialog;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
@@ -7,6 +8,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.GridLayoutManager;
@@ -14,7 +16,9 @@ import androidx.recyclerview.widget.GridLayoutManager;
 import com.bumptech.glide.Glide;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import course.examples.nt118.adapter.ProfilePostAdapter;
 import course.examples.nt118.databinding.ActivityOtherUserProfileBinding;
@@ -71,25 +75,12 @@ public class OtherUserProfileActivity extends AppCompatActivity {
         loadUserPosts();
     }
 
-    protected void onStart() { super.onStart(); Log.d(TAG, "2. onStart"); }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        Log.d(TAG, "3. onResume");
-    }
-
-    @Override
-    protected void onPause() { super.onPause(); Log.d(TAG, "4. onPause"); }
-
-    @Override
-    protected void onStop() { super.onStop(); Log.d(TAG, "5. onStop"); }
-
-    @Override
-    protected void onRestart() { super.onRestart(); Log.d(TAG, "6. onRestart"); }
-
-    @Override
-    protected void onDestroy() { super.onDestroy(); Log.d(TAG, "7. onDestroy"); }
+    @Override protected void onStart() { super.onStart(); Log.d(TAG, "2. onStart"); }
+    @Override protected void onResume() { super.onResume(); Log.d(TAG, "3. onResume"); }
+    @Override protected void onPause() { super.onPause(); Log.d(TAG, "4. onPause"); }
+    @Override protected void onStop() { super.onStop(); Log.d(TAG, "5. onStop"); }
+    @Override protected void onRestart() { super.onRestart(); Log.d(TAG, "6. onRestart"); }
+    @Override protected void onDestroy() { super.onDestroy(); Log.d(TAG, "7. onDestroy"); }
 
     private void initRecyclerView() {
         postAdapter = new ProfilePostAdapter(this, this::openPostDetail);
@@ -102,9 +93,10 @@ public class OtherUserProfileActivity extends AppCompatActivity {
 
         binding.btnFollow.setOnClickListener(v -> handleFollowAction());
 
-        binding.btnMore.setOnClickListener(v ->
-                Toast.makeText(this, "More options clicked", Toast.LENGTH_SHORT).show()
-        );
+        // [MỚI] Nút Report User (thêm logic cho nút mới trong XML)
+        if (binding.btnReportUser != null) {
+            binding.btnReportUser.setOnClickListener(v -> handleReportClick());
+        }
     }
 
     // ==================================================================
@@ -115,7 +107,7 @@ public class OtherUserProfileActivity extends AppCompatActivity {
         ApiService api = RetrofitClient.getInstance(this).getApiService();
         api.getUserById(targetUserId, currentUserId).enqueue(new Callback<UserResponse>() {
             @Override
-            public void onResponse(Call<UserResponse> call, Response<UserResponse> response) {
+            public void onResponse(@NonNull Call<UserResponse> call, @NonNull Response<UserResponse> response) {
                 if (response.isSuccessful() && response.body() != null) {
                     // Dùng getRealUser để xử lý wrapper
                     UserResponse user = response.body().getRealUser();
@@ -124,7 +116,7 @@ public class OtherUserProfileActivity extends AppCompatActivity {
             }
 
             @Override
-            public void onFailure(Call<UserResponse> call, Throwable t) {
+            public void onFailure(@NonNull Call<UserResponse> call, @NonNull Throwable t) {
                 Log.e(TAG, "Load user failed", t);
             }
         });
@@ -175,7 +167,7 @@ public class OtherUserProfileActivity extends AppCompatActivity {
         ApiService api = RetrofitClient.getInstance(this).getApiService();
         api.getPostsByUserID(targetUserId).enqueue(new Callback<PostsResponse>() {
             @Override
-            public void onResponse(Call<PostsResponse> call, Response<PostsResponse> response) {
+            public void onResponse(@NonNull Call<PostsResponse> call, @NonNull Response<PostsResponse> response) {
                 if (response.isSuccessful() && response.body() != null) {
                     List<Post> rawPosts = response.body().getPosts();
                     updatePostList(rawPosts);
@@ -183,7 +175,7 @@ public class OtherUserProfileActivity extends AppCompatActivity {
             }
 
             @Override
-            public void onFailure(Call<PostsResponse> call, Throwable t) {
+            public void onFailure(@NonNull Call<PostsResponse> call, @NonNull Throwable t) {
                 Log.e(TAG, "Load posts failed", t);
             }
         });
@@ -241,7 +233,7 @@ public class OtherUserProfileActivity extends AppCompatActivity {
 
         call.enqueue(new Callback<ResponseBody>() {
             @Override
-            public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
+            public void onResponse(@NonNull Call<ResponseBody> call, @NonNull Response<ResponseBody> response) {
                 if (!response.isSuccessful()) {
                     // Revert nếu lỗi
                     isFollowing = !isFollowing;
@@ -254,7 +246,7 @@ public class OtherUserProfileActivity extends AppCompatActivity {
             }
 
             @Override
-            public void onFailure(Call<ResponseBody> call, Throwable t) {
+            public void onFailure(@NonNull Call<ResponseBody> call, @NonNull Throwable t) {
                 isFollowing = !isFollowing;
                 updateFollowButtonState();
                 Toast.makeText(OtherUserProfileActivity.this, "Lỗi mạng", Toast.LENGTH_SHORT).show();
@@ -272,5 +264,68 @@ public class OtherUserProfileActivity extends AppCompatActivity {
             binding.btnFollow.setBackgroundResource(R.drawable.bg_button_orange); // Nền cam
             binding.btnFollow.setTextColor(ContextCompat.getColor(this, android.R.color.white));
         }
+    }
+
+    // ==================================================================
+    // 4. REPORT USER LOGIC [MỚI]
+    // ==================================================================
+
+    private void handleReportClick() {
+        // 0. Chặn tự report chính mình (UX)
+        if (currentUserId != null && currentUserId.equals(targetUserId)) {
+            Toast.makeText(this, "Bạn không thể báo cáo chính mình!", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        String[] reasons = {
+                "Tài khoản giả mạo",
+                "Đăng nội dung không phù hợp",
+                "Quấy rối hoặc bắt nạt",
+                "Tên người dùng không hợp lệ",
+                "Spam"
+        };
+
+        new AlertDialog.Builder(this)
+                .setTitle("Báo cáo người dùng này?")
+                .setSingleChoiceItems(reasons, -1, (dialog, which) -> {
+                    String selectedReason = reasons[which];
+                    sendReportUserToApi(selectedReason);
+                    dialog.dismiss();
+                })
+                .setNegativeButton("Hủy", null)
+                .show();
+    }
+
+    private void sendReportUserToApi(String content) {
+        // Body: { "target": "userID", "content": "lý do" }
+        Map<String, Object> body = new HashMap<>();
+        body.put("target", targetUserId);
+        body.put("content", content);
+
+        ApiService api = RetrofitClient.getInstance(this).getApiService();
+
+        // Gọi API reportUser (trả về ResponseBody theo định nghĩa ở bước trước)
+        api.reportUser(body).enqueue(new Callback<UserResponse>() {
+            @Override
+            public void onResponse(@NonNull Call<UserResponse> call, @NonNull Response<UserResponse> response) {
+                if (response.isSuccessful()) {
+                    Toast.makeText(OtherUserProfileActivity.this, "Đã gửi báo cáo thành công.", Toast.LENGTH_SHORT).show();
+                } else {
+                    try {
+                        String errorMsg = response.errorBody() != null ? response.errorBody().string() : "Lỗi không xác định";
+                        Log.e(TAG, "Report failed: " + errorMsg);
+                        Toast.makeText(OtherUserProfileActivity.this, "Gửi báo cáo thất bại.", Toast.LENGTH_SHORT).show();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+
+            @Override
+            public void onFailure(@NonNull Call<UserResponse> call, @NonNull Throwable t) {
+                Toast.makeText(OtherUserProfileActivity.this, "Lỗi kết nối", Toast.LENGTH_SHORT).show();
+                Log.e(TAG, "API Error", t);
+            }
+        });
     }
 }

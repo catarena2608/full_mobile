@@ -7,7 +7,9 @@ import android.os.Handler;
 import android.os.Looper;
 import android.text.TextUtils;
 import android.util.Log;
+import android.view.MenuItem;
 import android.view.View;
+import android.widget.PopupMenu;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -57,14 +59,9 @@ public class HomeActivity extends AppCompatActivity implements PostAdapter.PostI
     private final int LIMIT_FIRST_LOAD = 5;
     private final int LIMIT_LOAD_MORE = 3;
 
-    // ==================================================================
-    // 1. LIFECYCLE LOGS
-    // ==================================================================
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        Log.d(TAG, "1. onCreate: Khởi tạo HomeActivity");
         binding = ActivityHomeBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
@@ -74,30 +71,8 @@ public class HomeActivity extends AppCompatActivity implements PostAdapter.PostI
         setupRecyclerView();
         setupBottomNavigation();
 
-        // Load dữ liệu
         fetchAllPostsFromServer();
     }
-
-    @Override
-    protected void onStart() { super.onStart(); Log.d(TAG, "2. onStart"); }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        Log.d(TAG, "3. onResume: Home ready");
-    }
-
-    @Override
-    protected void onPause() { super.onPause(); Log.d(TAG, "4. onPause"); }
-
-    @Override
-    protected void onStop() { super.onStop(); Log.d(TAG, "5. onStop"); }
-
-    @Override
-    protected void onRestart() { super.onRestart(); Log.d(TAG, "6. onRestart"); }
-
-    @Override
-    protected void onDestroy() { super.onDestroy(); Log.d(TAG, "7. onDestroy"); }
 
     // ==================================================================
     // 2. SETUP & AUTHENTICATION
@@ -106,11 +81,9 @@ public class HomeActivity extends AppCompatActivity implements PostAdapter.PostI
     private boolean checkUserSession() {
         userId = TokenManager.getUserId(this);
         if (TextUtils.isEmpty(userId)) {
-            Log.w(TAG, "Session expired -> Redirecting to Login");
             redirectToLogin();
             return false;
         }
-        Log.i(TAG, "Home session active cho UserID: " + userId);
         return true;
     }
 
@@ -122,7 +95,6 @@ public class HomeActivity extends AppCompatActivity implements PostAdapter.PostI
     }
 
     private void setupViews() {
-        // Load avatar placeholder
         Glide.with(this)
                 .load("https://i.pravatar.cc/150?u=" + userId)
                 .placeholder(R.drawable.chef_hat)
@@ -139,10 +111,7 @@ public class HomeActivity extends AppCompatActivity implements PostAdapter.PostI
             });
         }
 
-        binding.swipeRefreshLayout.setOnRefreshListener(() -> {
-            Log.d(TAG, "User pull to refresh");
-            fetchAllPostsFromServer();
-        });
+        binding.swipeRefreshLayout.setOnRefreshListener(this::fetchAllPostsFromServer);
         binding.swipeRefreshLayout.setColorSchemeResources(android.R.color.holo_orange_light);
     }
 
@@ -179,17 +148,11 @@ public class HomeActivity extends AppCompatActivity implements PostAdapter.PostI
     // ==================================================================
 
     private void fetchAllPostsFromServer() {
-        Log.d(TAG, "API: Fetching All Posts (Global Feed)...");
-
-        // Fix cache (như đã sửa ở bước trước)
         userCache.clear();
-
         isLoading = true;
         binding.swipeRefreshLayout.setRefreshing(true);
 
         ApiService apiService = RetrofitClient.getInstance(this).getApiService();
-
-        // Call API to get posts (Newfeed)
         apiService.getAllPosts(null, null, null, null, null).enqueue(new Callback<PostsResponse>() {
             @Override
             public void onResponse(Call<PostsResponse> call, Response<PostsResponse> response) {
@@ -198,44 +161,30 @@ public class HomeActivity extends AppCompatActivity implements PostAdapter.PostI
 
                 if (response.isSuccessful() && response.body() != null) {
                     List<Post> rawPosts = response.body().getPosts();
-
                     if (rawPosts != null && !rawPosts.isEmpty()) {
-
-                        // --- [ĐÃ SỬA] ---
-                        // Tạo list mới để xử lý dữ liệu (không lọc bỏ bài của mình nữa)
                         List<Post> processedList = new ArrayList<>();
-
                         for (Post p : rawPosts) {
-                            // Chỉ kiểm tra null cho an toàn
                             if (p.getUserID() != null) {
-                                // Vẫn cần set placeholder để tránh lỗi hiển thị trong lúc chờ load info user
                                 p.setUserName("Loading...");
                                 p.setUserAvatar("");
-
                                 processedList.add(p);
                             }
                         }
-                        // ----------------
 
                         if (!processedList.isEmpty()) {
                             mAllPostsBuffer.clear();
-                            mAllPostsBuffer.addAll(processedList); // Nạp tất cả vào buffer
+                            mAllPostsBuffer.addAll(processedList);
                             mCurrentDisplayCount = 0;
-
                             postAdapter.setData(new ArrayList<>());
                             loadMoreFromBuffer();
                         } else {
                             Toast.makeText(HomeActivity.this, "Không có bài viết nào", Toast.LENGTH_SHORT).show();
                         }
-                    } else {
-                        Toast.makeText(HomeActivity.this, "Danh sách trống", Toast.LENGTH_SHORT).show();
                     }
                 } else if (response.code() == 401) {
                     TokenManager.clearSession(HomeActivity.this);
-                    RetrofitClient.clearCookies(HomeActivity.this);
                     redirectToLogin();
                 } else {
-                    Log.e(TAG, "API Failed. Code: " + response.code());
                     Toast.makeText(HomeActivity.this, "Lỗi Server: " + response.code(), Toast.LENGTH_SHORT).show();
                 }
             }
@@ -244,7 +193,6 @@ public class HomeActivity extends AppCompatActivity implements PostAdapter.PostI
             public void onFailure(Call<PostsResponse> call, Throwable t) {
                 isLoading = false;
                 binding.swipeRefreshLayout.setRefreshing(false);
-                Log.e(TAG, "Network Error", t);
                 Toast.makeText(HomeActivity.this, "Lỗi kết nối", Toast.LENGTH_SHORT).show();
             }
         });
@@ -269,21 +217,18 @@ public class HomeActivity extends AppCompatActivity implements PostAdapter.PostI
 
             if (endIndex > mCurrentDisplayCount) {
                 List<Post> subList = new ArrayList<>(mAllPostsBuffer.subList(mCurrentDisplayCount, endIndex));
-
                 if (isFirstLoad) postAdapter.setData(subList);
                 else postAdapter.addData(subList);
 
                 for (Post p : subList) fetchUserInfo(p);
-
                 mCurrentDisplayCount = endIndex;
             }
-
             isLoading = false;
         }, 500);
     }
 
     // ==================================================================
-    // 4. HELPER MAPPING & USER INFO
+    // 4. USER INFO
     // ==================================================================
 
     private void fetchUserInfo(Post post) {
@@ -318,10 +263,7 @@ public class HomeActivity extends AppCompatActivity implements PostAdapter.PostI
             if (p != null && p.get_id().equals(post.get_id())) {
                 p.setUserName(user.getName());
                 p.setUserAvatar(user.getAvatar());
-
-                // Cập nhật follow status từ User API
                 p.setFollowed(user.isMeFollow());
-
                 postAdapter.notifyItemChanged(i);
                 break;
             }
@@ -329,77 +271,53 @@ public class HomeActivity extends AppCompatActivity implements PostAdapter.PostI
     }
 
     // ==================================================================
-    // 5. INTERACTION LOGIC
+    // 5. INTERACTION LOGIC (Like, Follow, Save)
     // ==================================================================
 
     @Override
     public void onLikeClicked(String postID, boolean isLiked) {
         updateLocalState(postID, "LIKE", !isLiked);
-
         Map<String, String> body = new HashMap<>();
         body.put("postID", postID);
         Call<ResponseBody> call = !isLiked ?
                 RetrofitClient.getInstance(this).getApiService().likePost(body) :
                 RetrofitClient.getInstance(this).getApiService().unlikePost(body);
-
-        call.enqueue(new Callback<ResponseBody>() {
-            @Override
-            public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
-                if (!response.isSuccessful()) updateLocalState(postID, "LIKE", isLiked); // Revert
-            }
-            @Override
-            public void onFailure(Call<ResponseBody> call, Throwable t) {
-                updateLocalState(postID, "LIKE", isLiked);
-            }
-        });
+        call.enqueue(simpleCallback(postID, "LIKE", isLiked));
     }
 
     @Override
     public void onBookmarkClicked(String postID, boolean isBookmarked) {
         updateLocalState(postID, "BOOKMARK", !isBookmarked);
-
         Map<String, String> body = Collections.singletonMap("postID", postID);
         Call<ResponseBody> call = !isBookmarked ?
                 RetrofitClient.getInstance(this).getApiService().savePost(body) :
                 RetrofitClient.getInstance(this).getApiService().unsavePost(body);
-
-        call.enqueue(new Callback<ResponseBody>() {
-            @Override
-            public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
-                if (!response.isSuccessful()) {
-                    updateLocalState(postID, "BOOKMARK", isBookmarked);
-                } else {
-                    Toast.makeText(HomeActivity.this, !isBookmarked ? "Đã lưu" : "Đã bỏ lưu", Toast.LENGTH_SHORT).show();
-                }
-            }
-            @Override
-            public void onFailure(Call<ResponseBody> call, Throwable t) {
-                updateLocalState(postID, "BOOKMARK", isBookmarked);
-            }
-        });
+        call.enqueue(simpleCallback(postID, "BOOKMARK", isBookmarked));
     }
 
     @Override
     public void onFollowClicked(String targetUserID, boolean isFollowed) {
         updateLocalState(targetUserID, "FOLLOW", !isFollowed);
-
         Call<ResponseBody> call = !isFollowed ?
                 RetrofitClient.getInstance(this).getApiService().followUser(targetUserID) :
                 RetrofitClient.getInstance(this).getApiService().unfollowUser(targetUserID);
+        call.enqueue(simpleCallback(targetUserID, "FOLLOW", isFollowed));
+    }
 
-        call.enqueue(new Callback<ResponseBody>() {
+    // Callback rút gọn để revert UI nếu lỗi
+    private Callback<ResponseBody> simpleCallback(String id, String type, boolean oldState) {
+        return new Callback<ResponseBody>() {
             @Override
             public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
-                if (!response.isSuccessful()) updateLocalState(targetUserID, "FOLLOW", isFollowed);
+                if (!response.isSuccessful()) updateLocalState(id, type, oldState);
             }
             @Override
             public void onFailure(Call<ResponseBody> call, Throwable t) {
-                updateLocalState(targetUserID, "FOLLOW", isFollowed);
+                updateLocalState(id, type, oldState);
             }
-        });
+        };
     }
 
-    // Hàm update UI chung để đỡ lặp code
     private void updateLocalState(String id, String type, boolean newState) {
         List<Post> currentList = postAdapter.getCurrentList();
         for (int i = 0; i < currentList.size(); i++) {
@@ -420,17 +338,11 @@ public class HomeActivity extends AppCompatActivity implements PostAdapter.PostI
 
             if (changed) postAdapter.notifyItemChanged(i);
         }
-        // --- THÊM PHẦN NÀY: Cập nhật luôn vào userCache ---
-        if ("FOLLOW".equals(type)) {
-            // id ở đây chính là targetUserID
-            if (userCache.containsKey(id)) {
-                UserResponse cachedUser = userCache.get(id);
-                if (cachedUser != null) {
-                    // Cập nhật trạng thái trong cache
-                    cachedUser.setMeFollow(newState);
-                    // Lưu đè lại vào map (cho chắc ăn)
-                    userCache.put(id, cachedUser);
-                }
+        if ("FOLLOW".equals(type) && userCache.containsKey(id)) {
+            UserResponse cachedUser = userCache.get(id);
+            if (cachedUser != null) {
+                cachedUser.setMeFollow(newState);
+                userCache.put(id, cachedUser);
             }
         }
     }
@@ -441,12 +353,8 @@ public class HomeActivity extends AppCompatActivity implements PostAdapter.PostI
     public void onPostClicked(Post post) { openPostDetail(post); }
     @Override
     public void onUserClick(String targetUserID) {
-        if (TextUtils.isEmpty(targetUserID)) return;
-
-        if (targetUserID.equals(userId)) {
-            Intent intent = new Intent(this, ProfileActivity.class);
-            startActivity(intent);
-        } else {
+        if (targetUserID.equals(userId)) startActivity(new Intent(this, ProfileActivity.class));
+        else {
             Intent intent = new Intent(this, OtherUserProfileActivity.class);
             intent.putExtra("USER_ID", targetUserID);
             startActivity(intent);
@@ -454,57 +362,123 @@ public class HomeActivity extends AppCompatActivity implements PostAdapter.PostI
     }
 
     // ==================================================================
-    // 6. [NEW] DELETE POST FUNCTIONALITY
+    // 6. [MỚI] MENU TÙY CHỌN (DELETE / REPORT)
     // ==================================================================
 
     @Override
-    public void onPostLongClicked(Post post, View view) {
-        // Double check ownership locally just in case
-        if (post.getUserID() != null && post.getUserID().equals(userId)) {
-            showDeleteConfirmationDialog(post);
+    public void onMoreOptionClicked(Post post, View view) {
+        // Tạo PopupMenu gắn vào nút 3 chấm
+        PopupMenu popupMenu = new PopupMenu(this, view);
+
+        // Kiểm tra quyền sở hữu
+        if (userId.equals(post.getUserID())) {
+            // Là chủ bài viết -> Thêm option Xóa
+            popupMenu.getMenu().add(0, 1, 0, "Xóa bài viết");
+        } else {
+            // Của người khác -> Thêm option Báo cáo
+            popupMenu.getMenu().add(0, 2, 0, "Báo cáo bài viết");
         }
+
+        // Bắt sự kiện chọn item
+        popupMenu.setOnMenuItemClickListener(item -> {
+            switch (item.getItemId()) {
+                case 1: // Xóa
+                    showDeleteConfirmationDialog(post);
+                    return true;
+                case 2: // Báo cáo
+                    showReportReasonDialog(post);
+                    return true;
+                default:
+                    return false;
+            }
+        });
+
+        popupMenu.show();
     }
 
+    // --- LOGIC XÓA BÀI VIẾT ---
     private void showDeleteConfirmationDialog(Post post) {
         new AlertDialog.Builder(this)
                 .setTitle("Xóa bài viết")
                 .setMessage("Bạn có chắc chắn muốn xóa bài viết này không?")
-                .setPositiveButton("Xóa", (dialog, which) -> {
-                    performDeletePost(post);
-                })
-                .setNegativeButton("Hủy", (dialog, which) -> dialog.dismiss())
+                .setPositiveButton("Xóa", (dialog, which) -> performDeletePost(post))
+                .setNegativeButton("Hủy", null)
                 .show();
     }
 
     private void performDeletePost(Post post) {
-        Log.d(TAG, "API: Deleting post " + post.get_id());
-
         ApiService apiService = RetrofitClient.getInstance(this).getApiService();
-
-        // [SỬA] Dùng Callback<PostsResponse> để khớp với ApiService
         apiService.deletePost(post.get_id()).enqueue(new Callback<PostsResponse>() {
             @Override
             public void onResponse(@NonNull Call<PostsResponse> call, @NonNull Response<PostsResponse> response) {
                 if (response.isSuccessful()) {
                     Toast.makeText(HomeActivity.this, "Đã xóa bài viết", Toast.LENGTH_SHORT).show();
-
-                    // 1. Xóa khỏi UI Adapter
                     postAdapter.removePost(post.get_id());
-
-                    // 2. Xóa khỏi bộ nhớ đệm local (để không bị load lại khi scroll)
                     removeFromBuffer(post.get_id());
-
                 } else {
-                    String errorMsg = "Lỗi khi xóa: " + response.code();
-                    if (response.code() == 403) errorMsg = "Bạn không có quyền xóa bài này";
-                    Toast.makeText(HomeActivity.this, errorMsg, Toast.LENGTH_SHORT).show();
+                    Toast.makeText(HomeActivity.this, "Lỗi khi xóa: " + response.code(), Toast.LENGTH_SHORT).show();
+                }
+            }
+            @Override
+            public void onFailure(@NonNull Call<PostsResponse> call, @NonNull Throwable t) {
+                Toast.makeText(HomeActivity.this, "Lỗi kết nối", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    // --- LOGIC BÁO CÁO BÀI VIẾT ---
+    private void showReportReasonDialog(Post post) {
+        // Danh sách lý do báo cáo
+        final String[] reasons = {
+                "Nội dung spam",
+                "Hình ảnh nhạy cảm/khiêu dâm",
+                "Thông tin sai lệch",
+                "Quấy rối hoặc bắt nạt",
+                "Vi phạm quyền sở hữu trí tuệ",
+                "Khác"
+        };
+
+        // Biến tạm để lưu lựa chọn (dùng mảng 1 phần tử để final access)
+        final int[] selectedPosition = {-1};
+
+        new AlertDialog.Builder(this)
+                .setTitle("Tại sao bạn báo cáo bài viết này?")
+                .setSingleChoiceItems(reasons, -1, (dialog, which) -> {
+                    selectedPosition[0] = which;
+                })
+                .setPositiveButton("Gửi", (dialog, which) -> {
+                    if (selectedPosition[0] >= 0) {
+                        performReportPost(post, reasons[selectedPosition[0]]);
+                    } else {
+                        Toast.makeText(HomeActivity.this, "Vui lòng chọn lý do", Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .setNegativeButton("Hủy", null)
+                .show();
+    }
+
+    private void performReportPost(Post post, String reason) {
+        ApiService apiService = RetrofitClient.getInstance(this).getApiService();
+
+        // Tạo body request
+        Map<String, Object> body = new HashMap<>();
+        body.put("target", post.get_id());
+        body.put("reason", reason);
+        // Lưu ý: Key "reason" cần khớp với Backend của bạn. Nếu backend cần key khác (vd: "content", "subject"), hãy sửa lại ở đây.
+
+        apiService.reportPost(body).enqueue(new Callback<PostsResponse>() {
+            @Override
+            public void onResponse(@NonNull Call<PostsResponse> call, @NonNull Response<PostsResponse> response) {
+                if (response.isSuccessful()) {
+                    Toast.makeText(HomeActivity.this, "Đã gửi báo cáo. Cảm ơn bạn!", Toast.LENGTH_LONG).show();
+                } else {
+                    Toast.makeText(HomeActivity.this, "Gửi báo cáo thất bại: " + response.code(), Toast.LENGTH_SHORT).show();
                 }
             }
 
             @Override
             public void onFailure(@NonNull Call<PostsResponse> call, @NonNull Throwable t) {
-                Log.e(TAG, "Delete failed", t);
-                Toast.makeText(HomeActivity.this, "Lỗi kết nối", Toast.LENGTH_SHORT).show();
+                Toast.makeText(HomeActivity.this, "Lỗi kết nối khi báo cáo", Toast.LENGTH_SHORT).show();
             }
         });
     }
@@ -516,22 +490,15 @@ public class HomeActivity extends AppCompatActivity implements PostAdapter.PostI
                 break;
             }
         }
-        // Adjust display count since we removed an item
         if (mCurrentDisplayCount > 0) mCurrentDisplayCount--;
     }
 
     // ==================================================================
-    // 7. NAVIGATION & UTILS
+    // 7. NAVIGATION
     // ==================================================================
 
     private void openPostDetail(Post post) {
-        Intent intent;
-        if ("Recipe".equalsIgnoreCase(post.getType())) {
-            intent = new Intent(this, PostRecipeActivity.class);
-        } else {
-            intent = new Intent(this, PostDetailActivity.class);
-        }
-
+        Intent intent = new Intent(this, "Recipe".equalsIgnoreCase(post.getType()) ? PostRecipeActivity.class : PostDetailActivity.class);
         intent.putExtra("POST_ID", post.get_id());
         intent.putExtra("USER_NAME", post.getUserName());
         intent.putExtra("USER_AVATAR", post.getUserAvatar());
@@ -542,10 +509,7 @@ public class HomeActivity extends AppCompatActivity implements PostAdapter.PostI
         intent.putExtra("IS_BOOKMARKED", post.isBookmarked());
         intent.putExtra("IS_FOLLOWED", post.isFollowed());
         intent.putExtra("AUTHOR_ID", post.getUserID());
-
-        if (post.getMedia() != null && !post.getMedia().isEmpty()) {
-            intent.putExtra("MEDIA_URL", post.getMedia().get(0));
-        }
+        if (post.getMedia() != null && !post.getMedia().isEmpty()) intent.putExtra("MEDIA_URL", post.getMedia().get(0));
         startActivity(intent);
     }
 
@@ -555,17 +519,10 @@ public class HomeActivity extends AppCompatActivity implements PostAdapter.PostI
     private void setupBottomNavigation() {
         View navView = binding.bottomNavigationBar.getRoot();
         if (navView == null) return;
-
-        View navHome = navView.findViewById(R.id.nav_home);
-        View navSearch = navView.findViewById(R.id.nav_search);
-        View navAdd = navView.findViewById(R.id.nav_add);
-        View navSaved = navView.findViewById(R.id.nav_saved);
-        View navProfile = navView.findViewById(R.id.nav_profile);
-
-        if (navHome != null) navHome.setOnClickListener(v -> binding.rvFeed.smoothScrollToPosition(0));
-        if (navSearch != null) navSearch.setOnClickListener(v -> startActivity(new Intent(this, SearchActivity.class)));
-        if (navAdd != null) navAdd.setOnClickListener(v -> openPostComposer());
-        if (navSaved != null) navSaved.setOnClickListener(v -> startActivity(new Intent(this, SavedPostsActivity.class)));
-        if (navProfile != null) navProfile.setOnClickListener(v -> openProfileScreen());
+        navView.findViewById(R.id.nav_home).setOnClickListener(v -> binding.rvFeed.smoothScrollToPosition(0));
+        navView.findViewById(R.id.nav_search).setOnClickListener(v -> startActivity(new Intent(this, SearchActivity.class)));
+        navView.findViewById(R.id.nav_add).setOnClickListener(v -> openPostComposer());
+        navView.findViewById(R.id.nav_saved).setOnClickListener(v -> startActivity(new Intent(this, SavedPostsActivity.class)));
+        navView.findViewById(R.id.nav_profile).setOnClickListener(v -> openProfileScreen());
     }
 }

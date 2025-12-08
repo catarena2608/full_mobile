@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 
 import course.examples.nt118.model.CommentListResponse;
+import course.examples.nt118.model.CommentResponse;
 import course.examples.nt118.model.LoginResponse;
 import course.examples.nt118.model.Notify;
 import course.examples.nt118.model.PostsResponse;
@@ -161,5 +162,13 @@ public interface ApiService {
             @Part List<MultipartBody.Part> files
     );
 
-    // ================= NOTIFY (Thông báo) =================
+    @POST("comment/report")
+    Call<CommentResponse> reportComment(@Body Map<String, Object> body);
+
+    @POST("users/report")
+    Call<UserResponse> reportUser(@Body Map<String, Object> body);
+
+    @POST("post/report")
+    Call<PostsResponse> reportPost(@Body Map<String, Object> body);
 }
+

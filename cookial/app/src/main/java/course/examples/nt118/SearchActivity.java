@@ -20,44 +20,51 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
+import course.examples.nt118.adapter.PostAdapter;
 import course.examples.nt118.adapter.UserAdapter;
+import course.examples.nt118.model.Post;
+import course.examples.nt118.model.PostsResponse;
 import course.examples.nt118.model.UserResponse;
 import course.examples.nt118.network.ApiService;
 import course.examples.nt118.network.RetrofitClient;
 import course.examples.nt118.utils.TokenManager;
+import okhttp3.ResponseBody;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
-public class SearchActivity extends AppCompatActivity {
+public class SearchActivity extends AppCompatActivity implements PostAdapter.PostInteractionListener {
 
     private static final String TAG = "SearchActivity";
 
-    // UI Components
+    // UI
     private EditText etSearch;
     private ImageView ivSearching;
     private RecyclerView rvResults;
     private TextView tvRecentTitle, tvSeeAll;
 
-    // Tabs UI
+    // Tabs
     private TextView tvTabUser, tvTabPost, tvTabTag;
     private View lineTabUser, lineTabPost, lineTabTag;
 
     // Data
-    private String currentTab = "USER"; // "USER", "POST", "TAG"
-    private String myUserId; // ID của người đang đăng nhập
-    private UserAdapter userAdapter;
+    private String currentTab = "USER"; // USER, POST, TAG
+    private String myUserId;
 
-    // ==================================================================
-    // 1. LIFECYCLE LOGS
-    // ==================================================================
+    // Adapters
+    private UserAdapter userAdapter;
+    private PostAdapter postAdapter;
+
+    // Cache User Info
+    private final Map<String, UserResponse> userCache = new HashMap<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        Log.d(TAG, "1. onCreate: Init SearchActivity");
         setContentView(R.layout.activity_search);
 
         myUserId = TokenManager.getUserId(this);
@@ -67,49 +74,8 @@ public class SearchActivity extends AppCompatActivity {
         setupBottomNavigation();
         setupSearchInteractions();
 
-        // Mặc định chọn tab User
         selectTab("USER");
     }
-
-    @Override
-    protected void onStart() {
-        super.onStart();
-        Log.d(TAG, "2. onStart");
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        Log.d(TAG, "3. onResume");
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        Log.d(TAG, "4. onPause");
-    }
-
-    @Override
-    protected void onStop() {
-        super.onStop();
-        Log.d(TAG, "5. onStop");
-    }
-
-    @Override
-    protected void onRestart() {
-        super.onRestart();
-        Log.d(TAG, "6. onRestart");
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        Log.d(TAG, "7. onDestroy");
-    }
-
-    // ==================================================================
-    // 2. INIT & SETUP
-    // ==================================================================
 
     private void initViews() {
         etSearch = findViewById(R.id.et_search);
@@ -118,13 +84,10 @@ public class SearchActivity extends AppCompatActivity {
         tvRecentTitle = findViewById(R.id.tv_recent);
         tvSeeAll = findViewById(R.id.tv_see_all);
 
-        // Tab Refs
         tvTabUser = findViewById(R.id.tv_tab_user);
         lineTabUser = findViewById(R.id.line_tab_user);
-
         tvTabPost = findViewById(R.id.tv_tab_post);
         lineTabPost = findViewById(R.id.line_tab_post);
-
         tvTabTag = findViewById(R.id.tv_tab_tag);
         lineTabTag = findViewById(R.id.line_tab_tag);
 
@@ -132,35 +95,26 @@ public class SearchActivity extends AppCompatActivity {
     }
 
     private void initAdapters() {
-        // [LOGIC CLICK] Chuyển hướng sang OtherUserProfileActivity
+        // 1. User Adapter
         userAdapter = new UserAdapter(this, new ArrayList<>(), false, new UserAdapter.OnUserClickListener() {
             @Override
             public void onUserClick(UserResponse user) {
-                // Gọi hàm xử lý chuyển trang thông minh
                 openUserProfile(user.getId());
             }
-
             @Override
             public void onRemoveClick(UserResponse user, int position) { }
         });
 
-        rvResults.setAdapter(userAdapter);
+        // 2. Post Adapter
+        postAdapter = new PostAdapter(this, this);
     }
 
-    /**
-     * Hàm xử lý chuyển trang Profile
-     * - Nếu click vào chính mình -> ProfileActivity
-     * - Nếu click vào người khác -> OtherUserProfileActivity
-     */
     private void openUserProfile(String targetUserId) {
         if (targetUserId == null) return;
-
         Intent intent;
         if (targetUserId.equals(myUserId)) {
-            Log.d(TAG, "User clicked on self -> Opening ProfileActivity");
             intent = new Intent(SearchActivity.this, ProfileActivity.class);
         } else {
-            Log.d(TAG, "User clicked on ID: " + targetUserId + " -> Opening OtherUserProfileActivity");
             intent = new Intent(SearchActivity.this, OtherUserProfileActivity.class);
             intent.putExtra("USER_ID", targetUserId);
         }
@@ -168,12 +122,11 @@ public class SearchActivity extends AppCompatActivity {
     }
 
     // ==================================================================
-    // 3. SEARCH INTERACTIONS
+    // SEARCH LOGIC
     // ==================================================================
 
     private void setupSearchInteractions() {
         ivSearching.setOnClickListener(v -> performSearch());
-
         etSearch.setOnEditorActionListener((v, actionId, event) -> {
             if (actionId == EditorInfo.IME_ACTION_SEARCH) {
                 performSearch();
@@ -191,83 +144,130 @@ public class SearchActivity extends AppCompatActivity {
         }
 
         InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-        if (imm != null) {
-            imm.hideSoftInputFromWindow(etSearch.getWindowToken(), 0);
-        }
+        if (imm != null) imm.hideSoftInputFromWindow(etSearch.getWindowToken(), 0);
 
         tvRecentTitle.setText("Kết quả tìm kiếm");
         tvSeeAll.setVisibility(View.GONE);
 
+        userCache.clear();
+
         if ("USER".equals(currentTab)) {
             callApiSearchUser(query);
+        } else if ("POST".equals(currentTab)) {
+            callApiSearchPost(query);
         } else if ("TAG".equals(currentTab)) {
-            callApiSearchTag(query);
-        } else {
-            Toast.makeText(this, "Tính năng tìm kiếm bài viết đang phát triển", Toast.LENGTH_SHORT).show();
-            userAdapter.setData(new ArrayList<>());
+            callApiSearchPostByTag(query);
         }
     }
 
-    // ==================================================================
-    // 4. API CALLS
-    // ==================================================================
+    // --- API CALLS ---
 
     private void callApiSearchUser(String query) {
-        Log.d(TAG, "API: Searching User with query: " + query);
-        ApiService apiService = RetrofitClient.getInstance(this).getApiService();
-        apiService.searchUsers(query, null).enqueue(new Callback<UserResponse>() {
+        ApiService api = RetrofitClient.getInstance(this).getApiService();
+        api.searchUsers(query, null).enqueue(new Callback<UserResponse>() {
             @Override
             public void onResponse(Call<UserResponse> call, Response<UserResponse> response) {
-                handleSearchResponse(response);
+                if (response.isSuccessful() && response.body() != null) {
+                    List<UserResponse> users = response.body().getListUsers();
+                    if (users != null && !users.isEmpty()) {
+                        userAdapter.setData(users);
+                        rvResults.setAdapter(userAdapter);
+                    } else handleEmptyResult();
+                } else handleError();
             }
             @Override
-            public void onFailure(Call<UserResponse> call, Throwable t) {
-                Log.e(TAG, "Search User Failed", t);
-                Toast.makeText(SearchActivity.this, "Lỗi kết nối", Toast.LENGTH_SHORT).show();
-            }
+            public void onFailure(Call<UserResponse> call, Throwable t) { handleError(); }
         });
     }
 
-    private void callApiSearchTag(String query) {
-        Log.d(TAG, "API: Searching Tag with query: " + query);
-        ApiService apiService = RetrofitClient.getInstance(this).getApiService();
-        apiService.searchUsersByTag(query, null).enqueue(new Callback<UserResponse>() {
+    private void callApiSearchPost(String query) {
+        ApiService api = RetrofitClient.getInstance(this).getApiService();
+        api.searchPosts(query, null).enqueue(new Callback<PostsResponse>() {
             @Override
-            public void onResponse(Call<UserResponse> call, Response<UserResponse> response) {
-                handleSearchResponse(response);
+            public void onResponse(Call<PostsResponse> call, Response<PostsResponse> response) {
+                handlePostSearchResponse(response);
             }
             @Override
-            public void onFailure(Call<UserResponse> call, Throwable t) {
-                Log.e(TAG, "Search Tag Failed", t);
-                Toast.makeText(SearchActivity.this, "Lỗi kết nối", Toast.LENGTH_SHORT).show();
-            }
+            public void onFailure(Call<PostsResponse> call, Throwable t) { handleError(); }
         });
     }
 
-    private void handleSearchResponse(Response<UserResponse> response) {
+    private void callApiSearchPostByTag(String query) {
+        ApiService api = RetrofitClient.getInstance(this).getApiService();
+        api.searchPostsByTag(query, null).enqueue(new Callback<PostsResponse>() {
+            @Override
+            public void onResponse(Call<PostsResponse> call, Response<PostsResponse> response) {
+                handlePostSearchResponse(response);
+            }
+            @Override
+            public void onFailure(Call<PostsResponse> call, Throwable t) { handleError(); }
+        });
+    }
+
+    private void handlePostSearchResponse(Response<PostsResponse> response) {
         if (response.isSuccessful() && response.body() != null) {
-            List<UserResponse> users = response.body().getListUsers();
+            List<Post> posts = response.body().getPosts();
+            if (posts != null && !posts.isEmpty()) {
+                postAdapter.setData(posts);
+                rvResults.setAdapter(postAdapter);
+                for (Post p : posts) fetchUserInfo(p);
+            } else handleEmptyResult();
+        } else handleError();
+    }
 
-            if (users != null && !users.isEmpty()) {
-                Log.d(TAG, "API Success: Found " + users.size() + " users.");
-                userAdapter.setData(users);
-                if (rvResults.getAdapter() != userAdapter) {
-                    rvResults.setAdapter(userAdapter);
+    private void fetchUserInfo(Post post) {
+        String uid = post.getUserID();
+        if (TextUtils.isEmpty(uid)) return;
+
+        if (userCache.containsKey(uid)) {
+            updatePostUserInfo(post, userCache.get(uid));
+            return;
+        }
+
+        RetrofitClient.getInstance(this).getApiService().getUserById(uid, myUserId).enqueue(new Callback<UserResponse>() {
+            @Override
+            public void onResponse(Call<UserResponse> call, Response<UserResponse> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    UserResponse user = response.body().getRealUser();
+                    if (user != null) {
+                        userCache.put(uid, user);
+                        updatePostUserInfo(post, user);
+                    }
                 }
-            } else {
-                Log.d(TAG, "API Success: No users found.");
-                userAdapter.setData(new ArrayList<>());
-                Toast.makeText(SearchActivity.this, "Không tìm thấy kết quả nào", Toast.LENGTH_SHORT).show();
             }
-        } else {
-            Log.e(TAG, "API Error: " + response.code());
-            userAdapter.setData(new ArrayList<>());
-            Toast.makeText(SearchActivity.this, "Lỗi server: " + response.code(), Toast.LENGTH_SHORT).show();
+            @Override public void onFailure(Call<UserResponse> call, Throwable t) {}
+        });
+    }
+
+    private void updatePostUserInfo(Post post, UserResponse user) {
+        // [QUAN TRỌNG] PostAdapter phải có hàm getCurrentList() như đã thêm
+        List<Post> currentList = postAdapter.getCurrentList();
+        if (currentList == null) return;
+
+        for (int i = 0; i < currentList.size(); i++) {
+            Post p = currentList.get(i);
+            if (p != null && p.get_id().equals(post.get_id())) {
+                p.setUserName(user.getName());
+                p.setUserAvatar(user.getAvatar());
+                p.setFollowed(user.isMeFollow());
+                postAdapter.notifyItemChanged(i);
+                break;
+            }
         }
     }
 
+    private void handleEmptyResult() {
+        if ("USER".equals(currentTab)) userAdapter.setData(new ArrayList<>());
+        else postAdapter.setData(new ArrayList<>());
+        Toast.makeText(this, "Không tìm thấy kết quả", Toast.LENGTH_SHORT).show();
+    }
+
+    private void handleError() {
+        Toast.makeText(this, "Lỗi kết nối", Toast.LENGTH_SHORT).show();
+    }
+
     // ==================================================================
-    // 5. TAB LOGIC
+    // TAB LOGIC
     // ==================================================================
 
     public void onTabClicked(View view) {
@@ -278,19 +278,16 @@ public class SearchActivity extends AppCompatActivity {
     }
 
     private void selectTab(String tabName) {
-        Log.d(TAG, "Tab Selected: " + tabName);
         this.currentTab = tabName;
         resetTabsUI();
         highlightTabUI(tabName);
 
         userAdapter.setData(new ArrayList<>());
+        postAdapter.setData(new ArrayList<>());
 
         String query = etSearch.getText().toString().trim();
-        if (!TextUtils.isEmpty(query)) {
-            performSearch();
-        } else {
-            showHistoryUI();
-        }
+        if (!TextUtils.isEmpty(query)) performSearch();
+        else showHistoryUI();
     }
 
     private void showHistoryUI() {
@@ -332,27 +329,110 @@ public class SearchActivity extends AppCompatActivity {
     }
 
     // ==================================================================
-    // 6. NAVIGATION
+    // POST ADAPTER INTERACTIONS
+    // ==================================================================
+
+    @Override
+    public void onLikeClicked(String postID, boolean isLiked) {
+        updateLocalPostState(postID, "LIKE", !isLiked);
+        Map<String, String> body = new HashMap<>();
+        body.put("postID", postID);
+        ApiService api = RetrofitClient.getInstance(this).getApiService();
+        Call<ResponseBody> call = !isLiked ? api.likePost(body) : api.unlikePost(body);
+        call.enqueue(new Callback<ResponseBody>() {
+            @Override
+            public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {
+                if (!response.isSuccessful()) updateLocalPostState(postID, "LIKE", isLiked); // Revert
+            }
+            @Override
+            public void onFailure(Call<ResponseBody> call, Throwable t) {
+                updateLocalPostState(postID, "LIKE", isLiked); // Revert
+            }
+        });
+    }
+
+    @Override
+    public void onBookmarkClicked(String postID, boolean isBookmarked) {
+        updateLocalPostState(postID, "BOOKMARK", !isBookmarked);
+        Map<String, String> body = new HashMap<>();
+        body.put("postID", postID);
+        ApiService api = RetrofitClient.getInstance(this).getApiService();
+        Call<ResponseBody> call = !isBookmarked ? api.savePost(body) : api.unsavePost(body);
+        call.enqueue(new Callback<ResponseBody>() {
+            @Override public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {}
+            @Override public void onFailure(Call<ResponseBody> call, Throwable t) {}
+        });
+    }
+
+    @Override
+    public void onFollowClicked(String targetUserID, boolean isFollowed) {
+        updateLocalPostState(targetUserID, "FOLLOW", !isFollowed);
+        ApiService api = RetrofitClient.getInstance(this).getApiService();
+        Call<ResponseBody> call = !isFollowed ? api.followUser(targetUserID) : api.unfollowUser(targetUserID);
+        call.enqueue(new Callback<ResponseBody>() {
+            @Override public void onResponse(Call<ResponseBody> call, Response<ResponseBody> response) {}
+            @Override public void onFailure(Call<ResponseBody> call, Throwable t) {}
+        });
+    }
+
+    // [BẮT BUỘC PHẢI CÓ] Để thỏa mãn Interface, nhưng để TRỐNG để không làm gì cả
+    @Override
+    public void onMoreOptionClicked(Post post, View view) {
+        // Không làm gì cả theo yêu cầu
+    }
+
+    @Override public void onCommentClicked(Post post) { openPostDetail(post); }
+    @Override public void onPostClicked(Post post) { openPostDetail(post); }
+    @Override public void onUserClick(String userID) { openUserProfile(userID); }
+
+    private void updateLocalPostState(String id, String type, boolean newState) {
+        List<Post> list = postAdapter.getCurrentList();
+        if (list == null) return;
+
+        for(int i=0; i<list.size(); i++) {
+            Post p = list.get(i);
+            boolean changed = false;
+
+            if("LIKE".equals(type) && p.get_id().equals(id)) {
+                p.setMeLike(newState);
+                p.setLike(newState ? p.getLike()+1 : p.getLike()-1);
+                changed = true;
+            } else if ("BOOKMARK".equals(type) && p.get_id().equals(id)) {
+                p.setBookmarked(newState);
+                changed = true;
+            } else if ("FOLLOW".equals(type) && p.getUserID().equals(id)) {
+                p.setFollowed(newState);
+                changed = true;
+                if (userCache.containsKey(id)) {
+                    UserResponse u = userCache.get(id);
+                    if(u != null) { u.setMeFollow(newState); userCache.put(id, u); }
+                }
+            }
+
+            if(changed) postAdapter.notifyItemChanged(i);
+        }
+    }
+
+    private void openPostDetail(Post post) {
+        Intent intent = new Intent(this, "Recipe".equalsIgnoreCase(post.getType()) ? PostRecipeActivity.class : PostDetailActivity.class);
+        intent.putExtra("POST_ID", post.get_id());
+        intent.putExtra("AUTHOR_ID", post.getUserID());
+        startActivity(intent);
+    }
+
+    // ==================================================================
+    // NAVIGATION
     // ==================================================================
     private void setupBottomNavigation() {
         View navView = findViewById(R.id.bottom_navigation_bar);
         if (navView != null) {
-            View navHome = navView.findViewById(R.id.nav_home);
-            View navAdd = navView.findViewById(R.id.nav_add);
-            View navSaved = navView.findViewById(R.id.nav_saved);
-            View navProfile = navView.findViewById(R.id.nav_profile);
-
-            if (navHome != null) navHome.setOnClickListener(v -> {
+            navView.findViewById(R.id.nav_home).setOnClickListener(v -> {
                 startActivity(new Intent(this, HomeActivity.class));
                 finish();
             });
-            if (navAdd != null) navAdd.setOnClickListener(v -> {
-                startActivity(new Intent(this, NewPostActivity.class));
-            });
-            if (navSaved != null) navSaved.setOnClickListener(v -> {
-                startActivity(new Intent(this, SavedPostsActivity.class));
-            });
-            if (navProfile != null) navProfile.setOnClickListener(v -> {
+            navView.findViewById(R.id.nav_add).setOnClickListener(v -> startActivity(new Intent(this, NewPostActivity.class)));
+            navView.findViewById(R.id.nav_saved).setOnClickListener(v -> startActivity(new Intent(this, SavedPostsActivity.class)));
+            navView.findViewById(R.id.nav_profile).setOnClickListener(v -> {
                 Intent intent = new Intent(this, ProfileActivity.class);
                 intent.putExtra("USER_ID", myUserId);
                 startActivity(intent);

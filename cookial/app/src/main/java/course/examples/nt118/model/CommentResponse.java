@@ -1,93 +1,70 @@
 package course.examples.nt118.model;
 
+import com.google.gson.annotations.SerializedName;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
 public class CommentResponse {
 
-    private String _id;           // ID comment
-    private String postId;        // ID bài viết
-    private String userId;        // ID người comment
-    private String content;       // Nội dung comment
-    private Date createdAt;       // Ngày tạo
-    private String userName;      // Tên người comment
-    private String userAvatar;    // Ảnh đại diện người comment
-    private int depth;            // depth comment (0,1,2)
-    private List<CommentResponse> replies = new ArrayList<>(); // reply lồng nhau
+    // --- MAPPING ID (Quan trọng) ---
+    // JSON trả về "_id" nhưng Java dùng "id" cho thuận tiện
+    @SerializedName(value = "_id", alternate = {"id"})
+    private String id;
 
-    public CommentResponse() {
-    }
+    @SerializedName("postID") // Hoặc "postId" tùy server
+    private String postId;
 
-    public String get_id() {
-        return _id;
-    }
+    @SerializedName("userID") // Hoặc "userId"
+    private String userId;
 
-    public void set_id(String _id) {
-        this._id = _id;
-    }
+    @SerializedName("content")
+    private String content;
 
-    public String getPostId() {
-        return postId;
-    }
+    @SerializedName(value = "createdAt", alternate = {"created_at"})
+    private Date createdAt;
 
-    public void setPostId(String postId) {
-        this.postId = postId;
-    }
+    // --- Các trường thông tin User (Nếu API trả về kèm luôn) ---
+    @SerializedName("userName")
+    private String userName;
 
-    public String getUserId() {
-        return userId;
-    }
+    @SerializedName("userAvatar")
+    private String userAvatar;
 
-    public void setUserId(String userId) {
-        this.userId = userId;
-    }
+    // --- Cấu trúc phân cấp ---
+    @SerializedName("depth")
+    private int depth;
 
-    public String getContent() {
-        return content;
-    }
+    @SerializedName("replies")
+    private List<CommentResponse> replies = new ArrayList<>();
 
-    public void setContent(String content) {
-        this.content = content;
-    }
+    public CommentResponse() {}
 
-    public Date getCreatedAt() {
-        return createdAt;
-    }
+    // --- GETTERS & SETTERS ---
+    public String getId() { return id; }
+    public void setId(String id) { this.id = id; }
 
-    public void setCreatedAt(Date createdAt) {
-        this.createdAt = createdAt;
-    }
+    public String getPostId() { return postId; }
+    public void setPostId(String postId) { this.postId = postId; }
 
-    public String getUserName() {
-        return userName;
-    }
+    public String getUserId() { return userId; }
+    public void setUserId(String userId) { this.userId = userId; }
 
-    public void setUserName(String userName) {
-        this.userName = userName;
-    }
+    public String getContent() { return content; }
+    public void setContent(String content) { this.content = content; }
 
-    public String getUserAvatar() {
-        return userAvatar;
-    }
+    public Date getCreatedAt() { return createdAt; }
+    public void setCreatedAt(Date createdAt) { this.createdAt = createdAt; }
 
-    public void setUserAvatar(String userAvatar) {
-        this.userAvatar = userAvatar;
-    }
+    public String getUserName() { return userName; }
+    public void setUserName(String userName) { this.userName = userName; }
 
-    public int getDepth() {
-        return depth;
-    }
+    public String getUserAvatar() { return userAvatar; }
+    public void setUserAvatar(String userAvatar) { this.userAvatar = userAvatar; }
 
-    public void setDepth(int depth) {
-        this.depth = depth;
-    }
+    public int getDepth() { return depth; }
+    public void setDepth(int depth) { this.depth = depth; }
 
-    public List<CommentResponse> getReplies() {
-        return replies;
-    }
-
-    public void setReplies(List<CommentResponse> replies) {
-        this.replies = replies;
-    }
+    public List<CommentResponse> getReplies() { return replies; }
+    public void setReplies(List<CommentResponse> replies) { this.replies = replies; }
 }

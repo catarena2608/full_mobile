@@ -119,13 +119,16 @@ router.post("/logout", (req, res) => {
 let otpStore = {}; // { email: { otp, expires, verified, lastSent } }
 
 const transporter = nodemailer.createTransport({
-  host: "smtp.hostinger.com",
-  port: 465,
-  secure: process.env.DEPLOY === "production",
+ host: "smtp.hostinger.com",
+  port: 587, // 👈 Đổi từ 465 sang 587
+  secure: false, // 👈 Với port 587, bắt buộc phải để secure là false
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
   },
+  tls: {
+    rejectUnauthorized: false // 👈 Thêm dòng này nếu gặp lỗi về chứng chỉ SSL
+  }
 });
 
 // 1️⃣ Gửi OTP qua mail

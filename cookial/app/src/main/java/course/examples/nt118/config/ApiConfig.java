@@ -21,6 +21,6 @@ public class ApiConfig {
     }
 
     // ================= TIMEOUTS =================
-    public static final long CONNECT_TIMEOUT = 30; // giây
-    public static final long READ_TIMEOUT = 30;    // giây
+    public static final long CONNECT_TIMEOUT = 60; // giây
+    public static final long READ_TIMEOUT = 60;    // giây
 }
