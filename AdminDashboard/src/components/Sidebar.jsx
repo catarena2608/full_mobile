@@ -6,12 +6,12 @@ const Sidebar = () => {
     const location = useLocation();
 
     const menuItems = [
-        { path: '/', icon: LayoutDashboard, label: 'Tổng Quan' },
-        { path: '/users', icon: Users, label: 'Người Dùng' },
-        { path: '/posts', icon: FileText, label: 'Bài Viết' },
-        { path: '/recipes', icon: Utensils, label: 'Công Thức' },
-        { path: '/top-search', icon: Search, label: 'Tìm Kiếm Hàng Đầu' },
-        { path: '/reports', icon: Flag, label: 'Báo Cáo' },
+        { path: '/dashboard', icon: LayoutDashboard, label: 'Tổng Quan' },
+        { path: '/dashboard/users', icon: Users, label: 'Người Dùng' },
+        { path: '/dashboard/posts', icon: FileText, label: 'Bài Viết' },
+        { path: '/dashboard/recipes', icon: Utensils, label: 'Công Thức' },
+        { path: '/dashboard/top-search', icon: Search, label: 'Tìm Kiếm Hàng Đầu' },
+        { path: '/dashboard/reports', icon: Flag, label: 'Báo Cáo' },
     ];
 
     return (
@@ -26,10 +26,14 @@ const Sidebar = () => {
                     let isActive = location.pathname === item.path;
 
                     // Handle detail page active states
-                    if (item.path === '/users' && location.pathname.startsWith('/user/')) isActive = true;
-                    if (item.path === '/posts' && location.pathname.startsWith('/post/')) isActive = true;
-                    if (item.path === '/recipes' && location.pathname.startsWith('/recipe/')) isActive = true;
-                    if (item.path === '/reports' && (location.pathname.startsWith('/report/') || location.pathname.startsWith('/comment/'))) isActive = true;
+                    if (item.path === '/dashboard/users' && location.pathname.startsWith('/dashboard/user/')) isActive = true;
+                    if (item.path === '/dashboard/posts' && location.pathname.startsWith('/dashboard/post/')) isActive = true;
+                    if (item.path === '/dashboard/recipes' && location.pathname.startsWith('/dashboard/recipe/')) isActive = true;
+                    if (
+                        item.path === '/dashboard/reports' &&
+                        (location.pathname.startsWith('/dashboard/report/') ||
+                            location.pathname.startsWith('/dashboard/comment/'))
+                    ) isActive = true;
 
                     return (
                         <Link
