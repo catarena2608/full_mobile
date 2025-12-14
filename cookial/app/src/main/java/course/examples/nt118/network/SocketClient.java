@@ -32,7 +32,7 @@ public class SocketClient {
     private String getSocketUrl() {
         // Trả về IP/Domain của Server Socket
         // Lưu ý: Nếu server chạy local hoặc port khác, hãy sửa lại cho đúng
-        return "http://34.143.237.110:6001";
+        return "http://136.110.31.88:6001";
     }
 
     public void connect(String jwtToken) {

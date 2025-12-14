@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webadmin-deployment
+spec:
+  replicas: 1 # Số lượng Pod chạy (có thể tăng lên 2 để dự phòng)
+  selector:
+    matchLabels:
+      app: webadmin
+  template:
+    metadata:
+      labels:
+        app: webadmin
+    spec:
+      containers:
+        - name: webadmin
+          # ⚠️ LƯU Ý: Thay đổi 'catarena/frontend_react:latest' thành tên image thực tế của bạn
+          image: catarena/webadmin:latest
+          imagePullPolicy: Always # Luôn kéo image mới nhất khi restart
+          ports:
+            - containerPort: 80 # Nginx trong container lắng nghe port 80
+          resources:
+            limits:
+              memory: "128Mi"
+              cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: webadmin-service
+spec:
+  type: LoadBalancer # Yêu cầu Cloud Provider cấp IP PublicSSSS
+  selector:
+    app: webadmin # Phải trùng với label của Deployment ở trên
+  ports:
+    - protocol: TCP
+      port: 80       # Port mở ra bên ngoài (External IP:80)
+      targetPort: 80 # Port của container (Nginx)

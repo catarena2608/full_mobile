@@ -23,6 +23,7 @@ spec:
       labels:
         app: backend-auth
     spec:
+      dnsPolicy: ClusterFirst
       containers:
         - name: backend-auth
           image: catarena/backend_auth:latest
