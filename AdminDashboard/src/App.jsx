@@ -6,8 +6,8 @@ import Users from './pages/Users';
 import Posts from './pages/Posts';
 import Recipes from './pages/Recipes';
 import TopSearch from './pages/TopSearch';
-import PublicRoute from './pages/PublicRoute';
-import ProtectedRoute from './pages/ProtectedRoute';
+
+
 
 import Login from './pages/Login';
 import Reports from './pages/Reports';
@@ -29,29 +29,20 @@ function App() {
   return (
     <Router>
       <Routes>
-
-        {/* PUBLIC */}
-        <Route element={<PublicRoute />}>
-          <Route path="/login" element={<Login />} />
+        <Route path="/" element={<Login />} />
+        <Route path="/" element={<Layout />}>
+          <Route path="dashboard" element={<Dashboard />} />
+          <Route path="users" element={<Users />} />
+          <Route path="posts" element={<Posts />} />
+          <Route path="recipes" element={<Recipes />} />
+          <Route path="top-search" element={<TopSearch />} />
+          <Route path="reports" element={<Reports />} />
+          <Route path="post/:id" element={<PostDetail />} />
+          <Route path="user/:id" element={<UserDetail />} />
+          <Route path="report/:id" element={<ReportDetail />} />
+          <Route path="recipe/:id" element={<RecipeDetail />} />
+          <Route path="comment/:id" element={<CommentDetail />} />
         </Route>
-
-        {/* PROTECTED */}
-        <Route element={<ProtectedRoute />}>
-          <Route path="/" element={<Layout />}>
-            <Route index element={<Dashboard />} />
-            <Route path="users" element={<Users />} />
-            <Route path="posts" element={<Posts />} />
-            <Route path="recipes" element={<Recipes />} />
-            <Route path="top-search" element={<TopSearch />} />
-            <Route path="reports" element={<Reports />} />
-            <Route path="post/:id" element={<PostDetail />} />
-            <Route path="user/:id" element={<UserDetail />} />
-            <Route path="report/:id" element={<ReportDetail />} />
-            <Route path="recipe/:id" element={<RecipeDetail />} />
-            <Route path="comment/:id" element={<CommentDetail />} />
-          </Route>
-        </Route>
-
       </Routes>
     </Router>
   );

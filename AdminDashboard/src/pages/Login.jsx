@@ -22,7 +22,7 @@ const Login = () => {
                 // Login successful
                 // Cookie is set by backend (HttpOnly)
                 // We can redirect to dashboard
-                navigate('/');
+                navigate('/dashboard');
             } else {
                 setError(response.data.message || 'Đăng nhập thất bại');
             }
