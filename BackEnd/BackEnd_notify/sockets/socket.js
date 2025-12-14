@@ -44,6 +44,7 @@ function initSocketIO(server) {
     // 🔥 load notifications (filtered)
     const notifies = await Notify.find({
       userID,
+      isRead: false,
       actorID: { $nin: [...userBlockCache.get(userID)] }
     }).sort({ createdAt: -1 });
 
