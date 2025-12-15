@@ -64,7 +64,7 @@ const Dashboard = () => {
 
                         if (userIds.length > 0) {
                             const userRequests = userIds.map(id =>
-                                api.get(`/api/userAdmin/${id}`)
+                                api.get(`/stat/userAdmin/${id}`)
                             );
 
                             const userResponses = await Promise.all(userRequests);
