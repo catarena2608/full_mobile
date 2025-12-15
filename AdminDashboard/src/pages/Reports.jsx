@@ -138,9 +138,9 @@ const Reports = () => {
                                         <td className="p-4 text-sm text-gray-600 font-mono">
                                             {report.target?.substring(0, 8)}...
                                         </td>
-                                        <td className="p-4 text-gray-800">{report.reason}</td>
+                                        <td className="p-4 text-gray-800">{report.content}</td>
                                         <td className="p-4 text-sm text-gray-500">
-                                            {report.reporterID ? report.reporterID.substring(0, 8) + '...' : 'Ẩn danh'}
+                                            {report.author ? report.author.substring(0, 8) + '...' : 'Ẩn danh'}
                                         </td>
                                         <td className="p-4 text-sm text-gray-500">
                                             {new Date(report.createdAt).toLocaleDateString('vi-VN')}

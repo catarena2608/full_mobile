@@ -16,6 +16,32 @@ const Posts = () => {
         fetchPosts();
     }, []);
 
+    const fetchAllUsers = async () => {
+    let userMap = {};
+    let nextCursor = null;
+    let hasMore = true;
+
+    while (hasMore) {
+        const res = await api.get('/stat/userAdmin', {
+            params: {
+                limit: 50,
+                cursor: nextCursor
+            }
+        });
+
+        if (!res.data.success) break;
+
+        const users = res.data.users || [];
+        users.forEach(u => {
+            userMap[u._id] = u;
+        });
+
+        nextCursor = res.data.nextCursor;
+        hasMore = Boolean(nextCursor);
+    }
+
+    return userMap;
+};
     const fetchPosts = async () => {
     try {
         setError(null);
@@ -34,23 +60,10 @@ const Posts = () => {
             ? response.data.posts
             : [];
 
-        // 2️⃣ Fetch ALL users (1 lần)
-        let userMap = {};
-        try {
-            const userRes = await api.get('/stat/userAdmin', {
-                params: { limit: 500 } // đủ lớn
-            });
+        // 2️⃣ Fetch ALL users (cursor-based)
+        const userMap = await fetchAllUsers();
 
-            if (userRes.data.success && Array.isArray(userRes.data.users)) {
-                userRes.data.users.forEach(u => {
-                    userMap[u._id] = u;
-                });
-            }
-        } catch (err) {
-            console.warn('Could not fetch users:', err);
-        }
-
-        // 3️⃣ Map posts với author
+        // 3️⃣ Map posts → author
         const mappedPosts = rawPosts.map(post => ({
             ...post,
             author: userMap[post.userID] || {
@@ -68,6 +81,7 @@ const Posts = () => {
         setLoading(false);
     }
 };
+
 
 
     const handleRowClick = (post) => {

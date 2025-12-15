@@ -50,11 +50,11 @@ const ReportDetail = () => {
     const handleViewTarget = () => {
         if (!report) return;
         if (report.type === 'post') {
-            navigate(`/post/${report.target}`);
+            navigate(`/dashboard/post/${report.target}`);
         } else if (report.type === 'user') {
-            navigate(`/user/${report.target}`);
+            navigate(`/dashboard/user/${report.target}`);
         } else if (report.type === 'comment') {
-            navigate(`/comment/${report.target}`);
+            navigate(`/dashboard/comment/${report.target}`);
         }
     };
 
