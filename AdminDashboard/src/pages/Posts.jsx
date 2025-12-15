@@ -64,7 +64,7 @@ const Posts = () => {
     };
 
     const handleRowClick = (post) => {
-        navigate(`/post/${post._id}`);
+        navigate(`/dashboard/post/${post._id}`);
     };
 
     const filteredPosts = posts

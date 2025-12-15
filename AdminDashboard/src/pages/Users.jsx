@@ -61,7 +61,7 @@ const Users = () => {
     };
 
     const handleRowClick = (user) => {
-        navigate(`/user/${user._id}`);
+        navigate(`/dashboard/user/${user._id}`);
     };
 
     const handlePageChange = (newPage) => {

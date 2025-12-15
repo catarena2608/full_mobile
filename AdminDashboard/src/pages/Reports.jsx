@@ -42,7 +42,7 @@ const Reports = () => {
     };
 
     const handleViewDetails = (report) => {
-        navigate(`/report/${report._id}`);
+        navigate(`/dashboard/report/${report._id}`);
     };
 
     const handleOpenViolationModal = (report, type) => {
