@@ -15,7 +15,7 @@ const PostDetail = () => {
         const fetchPost = async () => {
             try {
                 setLoading(true);
-                const response = await api.get(`/api/postAdmin/${id}`);
+                const response = await api.get(`/stat/postAdmin/${id}`);
                 if (response.data.success) {
                     setPost(response.data.post);
                 } else {

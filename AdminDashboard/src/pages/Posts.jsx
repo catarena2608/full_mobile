@@ -19,7 +19,7 @@ const Posts = () => {
     const fetchPosts = async () => {
         try {
             setError(null);
-            const response = await api.get('/api/postAdmin?limit=50', {
+            const response = await api.get('/stat/postAdmin?limit=50', {
                 headers: { 'x-user-id': 'admin-view' }
             });
             if (response.data.success) {
@@ -31,7 +31,7 @@ const Posts = () => {
 
                 if (userIds.length > 0) {
                     try {
-                        const userRes = await api.get('/api/userAdmin', {
+                        const userRes = await api.get('/stat/userAdmin', {
                             params: { ids: userIds.join(','), limit: userIds.length }
                         });
                         if (userRes.data.success) {

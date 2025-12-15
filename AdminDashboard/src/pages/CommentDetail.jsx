@@ -17,7 +17,7 @@ const CommentDetail = () => {
     const fetchComment = async () => {
         try {
             setLoading(true);
-            const response = await api.get(`/api/postAdmin/comment/${id}`);
+            const response = await api.get(`/stat/postAdmin/comment/${id}`);
             if (response.data.success) {
                 setComment(response.data.comment);
             } else {

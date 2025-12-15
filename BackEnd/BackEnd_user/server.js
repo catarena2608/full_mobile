@@ -17,7 +17,7 @@ app.use(bodyParser.json());
 // ===== ROUTES =====
 app.use("/api/users", require("./routes/userRoutes"));
 app.use("/api/follow", require("./routes/followRoutes"));
-app.use("/api/userAdmin", require("./routes/adminRoutes"));
+app.use("/stat/userAdmin", require("./routes/adminRoutes"));
 
 // ===== MONGODB =====
 mongoose.connect(process.env.MONGO_URI)

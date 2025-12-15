@@ -9,7 +9,6 @@ const Sidebar = () => {
         { path: '/dashboard', icon: LayoutDashboard, label: 'Tổng Quan' },
         { path: '/dashboard/users', icon: Users, label: 'Người Dùng' },
         { path: '/dashboard/posts', icon: FileText, label: 'Bài Viết' },
-        { path: '/dashboard/recipes', icon: Utensils, label: 'Công Thức' },
         { path: '/dashboard/top-search', icon: Search, label: 'Tìm Kiếm Hàng Đầu' },
         { path: '/dashboard/reports', icon: Flag, label: 'Báo Cáo' },
     ];

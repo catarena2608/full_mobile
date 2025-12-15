@@ -25,7 +25,7 @@ const PostDetailContent = ({ post }) => {
 
                 // 3. Fetch User Details if there are comments
                 if (userIds.length > 0) {
-                    const userRes = await api.get(`/api/userAdmin`, {
+                    const userRes = await api.get(`/stat/userAdmin`, {
                         params: { ids: userIds.join(','), limit: userIds.length }
                     });
                     if (userRes.data.success) {

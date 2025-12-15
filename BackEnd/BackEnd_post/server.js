@@ -39,7 +39,7 @@ app.use("/api/post", postRoutes);
 app.use("/api/save", saveRoutes);
 app.use("/api/like", likeRoutes);
 app.use("/api/comment", commentRoutes);
-app.use("/api/postAdmin", adminRoutes);
+app.use("/stat/postAdmin", adminRoutes);
 
 mongoose.connect(process.env.MONGO_URI)
   .then(async () => {

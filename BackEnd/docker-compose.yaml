@@ -17,7 +17,7 @@ services:
       - backend-notify
 
   api-gatewayAdmin:
-    image: catarena/gatewayadmin:latest 
+    image: catarena/gatewayadmin:v2
     container_name: api-gatewayadmin
     restart: always
     ports:
@@ -43,7 +43,7 @@ services:
       - microservice-net
 
   backend-post:
-    image: catarena/backend_post:latest
+    image: catarena/backend_post:v2
     container_name: backend-post
     restart: always
     expose:
@@ -54,7 +54,7 @@ services:
       - rabbitmq 
 
   backend-user:
-    image: catarena/backend_user:latest
+    image: catarena/backend_user:v2
     container_name: backend-user
     restart: always
     expose:

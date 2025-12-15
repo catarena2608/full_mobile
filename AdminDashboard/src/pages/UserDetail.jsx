@@ -14,7 +14,7 @@ const UserDetail = () => {
         const fetchUser = async () => {
             try {
                 setLoading(true);
-                const response = await api.get(`/api/userAdmin/${id}`);
+                const response = await api.get(`/stat/userAdmin/${id}`);
                 if (response.data.success) {
                     setUser(response.data.user);
                 } else {

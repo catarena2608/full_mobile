@@ -25,6 +25,6 @@ spec:
     spec:
       containers:
         - name: backend-user
-          image: catarena/backend_user:latest
+          image: catarena/backend_user:v2
           ports:
             - containerPort: 3002

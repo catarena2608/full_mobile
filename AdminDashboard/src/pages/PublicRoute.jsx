@@ -9,7 +9,7 @@ const PublicRoute = () => {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        await api.get('/api/userAdmin/me');
+        await api.get('/stat/userAdmin/me');
         setAuthenticated(true);
       } catch {
         setAuthenticated(false);

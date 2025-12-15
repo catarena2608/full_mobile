@@ -24,10 +24,10 @@ const Dashboard = () => {
                 // Fetch Stats
                 const currentYear = new Date().getFullYear();
                 const [userRes, postRes, likeRes, followRes, searchRes] = await Promise.all([
-                    api.get('/api/userAdmin/countUser'),
-                    api.get('/api/postAdmin/countPost'),
-                    api.get('/api/postAdmin/countLike'),
-                    api.get('/api/userAdmin/countFollow'),
+                    api.get('/stat/userAdmin/countUser'),
+                    api.get('/stat/postAdmin/countPost'),
+                    api.get('/stat/postAdmin/countLike'),
+                    api.get('/stat/userAdmin/countFollow'),
                     api.get(`/stat/search?limit=10&year=${currentYear}`)
                 ]);
 
@@ -54,7 +54,7 @@ const Dashboard = () => {
 
                 // Fetch Recent Posts for Table
                 try {
-                    const postsListRes = await api.get('/api/postAdmin?limit=5');
+                    const postsListRes = await api.get('/stat/postAdmin?limit=5');
                     if (postsListRes.data.success) {
                         const rawPosts = postsListRes.data.posts || [];
 
@@ -63,7 +63,7 @@ const Dashboard = () => {
                         let userMap = {};
 
                         if (userIds.length > 0) {
-                            const userRes = await api.get('/api/userAdmin', {
+                            const userRes = await api.get('/stat/userAdmin', {
                                 params: { ids: userIds.join(','), limit: userIds.length }
                             });
                             if (userRes.data.success) {

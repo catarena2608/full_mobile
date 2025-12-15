@@ -42,7 +42,7 @@ const Users = () => {
                 search: searchTerm
             };
 
-            const response = await api.get('/api/userAdmin', { params });
+            const response = await api.get('/stat/userAdmin', { params });
 
             if (response.data.success) {
                 setUsers(response.data.users || []);

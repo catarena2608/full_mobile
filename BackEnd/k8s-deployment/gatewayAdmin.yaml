@@ -27,6 +27,6 @@ spec:
     spec:
       containers:
         - name: api-gatewayadmin
-          image: catarena/gatewayadmin:latest
+          image: catarena/gatewayadmin:v2
           ports:
             - containerPort: 9000
