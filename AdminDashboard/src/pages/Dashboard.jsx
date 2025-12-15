@@ -59,28 +59,29 @@ const Dashboard = () => {
                         const rawPosts = postsListRes.data.posts || [];
 
                         // Fetch authors for these posts
-                        const userIds = [...new Set(rawPosts.map(p => p.userID))].filter(id => id);
+
+
+
+                        // 1️⃣ Fetch all users (1 lần)
+                        const usersRes = await api.get('/stat/userAdmin', {
+                            params: { limit: 200 } // đủ lớn
+                        });
+
                         let userMap = {};
 
-                        if (userIds.length > 0) {
-                            const userRequests = userIds.map(id =>
-                                api.get(`/stat/userAdmin/${id}`)
-                            );
-
-                            const userResponses = await Promise.all(userRequests);
-
-                            userResponses.forEach(res => {
-                                if (res.data.success && res.data.user) {
-                                    userMap[res.data.user._id] = res.data.user;
-                                }
+                        if (usersRes.data.success) {
+                            usersRes.data.users.forEach(u => {
+                                userMap[u._id] = u;
                             });
                         }
 
-
-                        // Map posts with author info
+                        // 2️⃣ Map post → author
                         const mappedPosts = rawPosts.map(post => ({
                             ...post,
-                            author: userMap[post.userID] || { name: 'Unknown', avatar: null }
+                            author: userMap[post.userID] || {
+                                name: 'Unknown',
+                                avatar: null
+                            }
                         }));
 
                         setRecentPosts(mappedPosts);
