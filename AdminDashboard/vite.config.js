@@ -11,11 +11,11 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'http://localhost:3000',
+        target: 'http://35.197.129.194',
         changeOrigin: true,
       },
       '/stat': {
-        target: 'http://localhost:9000',
+        target: 'http://34.124.175.170',
         changeOrigin: true,
       },
     }

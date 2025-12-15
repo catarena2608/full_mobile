@@ -4,7 +4,7 @@ import axios from 'axios';
 // If in production, this might need to change, but for dev this fixes CORS
 // import.meta.env.VITE_API_URL || 
 const api = axios.create({
-    baseURL: 'http://34.124.175.170', // Use env var in prod, proxy in dev
+    baseURL: '', // Use env var in prod, proxy in dev
     headers: {
         'Content-Type': 'application/json',
     },
