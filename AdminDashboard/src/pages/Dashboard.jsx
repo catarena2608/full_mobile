@@ -63,15 +63,19 @@ const Dashboard = () => {
                         let userMap = {};
 
                         if (userIds.length > 0) {
-                            const userRes = await api.get('/stat/userAdmin', {
-                                params: { ids: userIds.join(','), limit: userIds.length }
+                            const userRequests = userIds.map(id =>
+                                api.get(`/api/userAdmin/${id}`)
+                            );
+
+                            const userResponses = await Promise.all(userRequests);
+
+                            userResponses.forEach(res => {
+                                if (res.data.success && res.data.user) {
+                                    userMap[res.data.user._id] = res.data.user;
+                                }
                             });
-                            if (userRes.data.success) {
-                                userRes.data.users.forEach(u => {
-                                    userMap[u._id] = u;
-                                });
-                            }
                         }
+
 
                         // Map posts with author info
                         const mappedPosts = rawPosts.map(post => ({
