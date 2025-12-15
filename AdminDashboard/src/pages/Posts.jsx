@@ -17,51 +17,58 @@ const Posts = () => {
     }, []);
 
     const fetchPosts = async () => {
-        try {
-            setError(null);
-            const response = await api.get('/stat/postAdmin?limit=50', {
-                headers: { 'x-user-id': 'admin-view' }
-            });
-            if (response.data.success) {
-                const rawPosts = Array.isArray(response.data.posts) ? response.data.posts : [];
+    try {
+        setError(null);
 
-                // Fetch authors for these posts
-                const userIds = [...new Set(rawPosts.map(p => p.userID))].filter(id => id);
-                let userMap = {};
+        // 1️⃣ Fetch posts
+        const response = await api.get('/stat/postAdmin?limit=50', {
+            headers: { 'x-user-id': 'admin-view' }
+        });
 
-                if (userIds.length > 0) {
-                    try {
-                        const userRes = await api.get('/stat/userAdmin', {
-                            params: { ids: userIds.join(','), limit: userIds.length }
-                        });
-                        if (userRes.data.success) {
-                            userRes.data.users.forEach(u => {
-                                userMap[u._id] = u;
-                            });
-                        }
-                    } catch (err) {
-                        console.warn("Could not fetch authors:", err);
-                    }
-                }
-
-                // Map posts with author info
-                const mappedPosts = rawPosts.map(post => ({
-                    ...post,
-                    author: userMap[post.userID] || { name: 'Unknown', avatar: null }
-                }));
-
-                setPosts(mappedPosts);
-            } else {
-                setError('API returned success: false');
-            }
-        } catch (error) {
-            console.error('Error fetching posts:', error);
-            setError(error.message || 'Failed to fetch posts');
-            setPosts([]);
-        } finally {
-            setLoading(false);
+        if (!response.data.success) {
+            setError('API returned success: false');
+            return;
         }
-    };
+
+        const rawPosts = Array.isArray(response.data.posts)
+            ? response.data.posts
+            : [];
+
+        // 2️⃣ Fetch ALL users (1 lần)
+        let userMap = {};
+        try {
+            const userRes = await api.get('/stat/userAdmin', {
+                params: { limit: 500 } // đủ lớn
+            });
+
+            if (userRes.data.success && Array.isArray(userRes.data.users)) {
+                userRes.data.users.forEach(u => {
+                    userMap[u._id] = u;
+                });
+            }
+        } catch (err) {
+            console.warn('Could not fetch users:', err);
+        }
+
+        // 3️⃣ Map posts với author
+        const mappedPosts = rawPosts.map(post => ({
+            ...post,
+            author: userMap[post.userID] || {
+                name: 'Unknown',
+                avatar: null
+            }
+        }));
+
+        setPosts(mappedPosts);
+    } catch (error) {
+        console.error('Error fetching posts:', error);
+        setError(error.message || 'Failed to fetch posts');
+        setPosts([]);
+    } finally {
+        setLoading(false);
+    }
+};
+
 
     const handleRowClick = (post) => {
         navigate(`/dashboard/post/${post._id}`);
