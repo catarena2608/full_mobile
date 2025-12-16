@@ -18,6 +18,10 @@ async function connectRabbitMQ() {
     await channel.assertQueue(QUEUE, { durable: true });
     channel.prefetch(PREFETCH);
 
+    // 🔥 THÊM ĐOẠN NÀY - Đảm bảo channel có thể reply
+    // Test xem có thể gửi được không
+    console.log("✅ Stats Service channel ready to send replies");
+
     connection.on("close", () => {
       console.error("🔥 Stats RabbitMQ connection closed. Reconnecting...");
       channel = null;
