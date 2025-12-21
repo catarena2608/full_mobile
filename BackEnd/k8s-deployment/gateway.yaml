@@ -28,5 +28,6 @@ spec:
       containers:
         - name: api-gateway
           image: catarena/gateway:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 3000

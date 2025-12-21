@@ -27,5 +27,6 @@ spec:
       containers:
         - name: backend-auth
           image: catarena/backend_auth:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 3001

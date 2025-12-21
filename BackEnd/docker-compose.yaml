@@ -17,7 +17,7 @@ services:
       - backend-notify
 
   api-gatewayAdmin:
-    image: catarena/gatewayadmin:v2
+    image: catarena/gatewayadmin:latest
     container_name: api-gatewayadmin
     restart: always
     ports:
@@ -34,7 +34,7 @@ services:
 
 
   backend-auth:
-    image: catarena/backend_auth:latest
+    image: catarena/backend_auth:v5
     container_name: backend-auth
     restart: always
     expose:
@@ -43,7 +43,7 @@ services:
       - microservice-net
 
   backend-post:
-    image: catarena/backend_post:v2
+    image: catarena/backend_post:latest
     container_name: backend-post
     restart: always
     expose:
@@ -54,7 +54,7 @@ services:
       - rabbitmq 
 
   backend-user:
-    image: catarena/backend_user:v2
+    image: catarena/backend_user:latest
     container_name: backend-user
     restart: always
     expose:
@@ -85,7 +85,7 @@ services:
       - rabbitmq # Notify thường cần RabbitMQ để nhận tin nhắn
 
   backend-static:
-    image: catarena/backend_static:latest
+    image: catarena/backend_static:v3
     container_name: backend-static
     restart: always
     expose:

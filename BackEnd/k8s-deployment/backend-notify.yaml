@@ -28,5 +28,6 @@ spec:
       containers:
         - name: backend-notify
           image: catarena/backend_notify:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 6001

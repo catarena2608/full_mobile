@@ -26,5 +26,6 @@ spec:
       containers:
         - name: backend-post
           image: catarena/backend_post:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 4001

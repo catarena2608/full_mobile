@@ -2,6 +2,7 @@ package course.examples.nt118.network;
 
 import android.util.Log;
 import org.json.JSONObject;
+import org.json.JSONArray; // <--- Thêm import này
 import java.net.URISyntaxException;
 import java.util.Collections;
 import java.util.HashMap;
@@ -30,14 +31,15 @@ public class SocketClient {
     private SocketClient() { }
 
     private String getSocketUrl() {
-        // Trả về IP/Domain của Server Socket
-        // Lưu ý: Nếu server chạy local hoặc port khác, hãy sửa lại cho đúng
         return "http://136.110.31.88:6001";
     }
 
     public void connect(String jwtToken) {
         if (mSocket != null && mSocket.connected()) {
             Log.d(TAG, "Socket đã kết nối, bỏ qua.");
+            // ⚠️ QUAN TRỌNG: Nếu đã kết nối rồi, có thể Activity vừa mở lên sẽ bị lỡ mất sự kiện init.
+            // Ta có thể chủ động emit yêu cầu lấy lại list nếu cần (Tùy logic server).
+            // mSocket.emit("get_init_notifications");
             return;
         }
 
@@ -48,31 +50,19 @@ public class SocketClient {
 
         try {
             IO.Options options = new IO.Options();
-
-            // 1. Bắt buộc dùng WebSocket để tránh lỗi 400/Session ID unknown trên Load Balancer
             options.transports = new String[] { WebSocket.NAME };
 
-            // ==================================================================
-            // 🔴 FIX LỖI 401: Gửi Token bằng cả 2 cách để chắc chắn Server nhận được
-            // ==================================================================
-
-            // CÁCH 1: Gửi qua Auth Payload (Chuẩn Socket.IO v3/v4)
-            // Server nhận tại: socket.handshake.auth.token
+            // Auth Payload
             Map<String, String> auth = new HashMap<>();
             auth.put("token", jwtToken);
             options.auth = auth;
 
-            // CÁCH 2: Gửi qua HTTP Headers (Chuẩn REST API / Middleware Express)
-            // Server nhận tại: socket.handshake.headers.authorization
+            // Headers
             Map<String, List<String>> headers = new HashMap<>();
-            // Tự động thêm tiền tố "Bearer " nếu token chưa có
             String bearerToken = jwtToken.startsWith("Bearer ") ? jwtToken : "Bearer " + jwtToken;
             headers.put("Authorization", Collections.singletonList(bearerToken));
             options.extraHeaders = headers;
 
-            // ==================================================================
-
-            // Cấu hình Reconnect
             options.reconnection = true;
             options.reconnectionAttempts = 5;
             options.reconnectionDelay = 2000;
@@ -99,12 +89,7 @@ public class SocketClient {
 
         mSocket.on(Socket.EVENT_CONNECT_ERROR, args -> {
             if (args.length > 0 && args[0] instanceof Exception) {
-                Exception e = (Exception) args[0];
-                Log.e(TAG, "❌ Lỗi kết nối Socket: " + e.getMessage());
-                // Nếu vẫn bị 401, hãy kiểm tra lại Token có hết hạn không
-                if (e.getMessage().contains("401")) {
-                    Log.e(TAG, "👉 Token có thể đã hết hạn hoặc Server từ chối xác thực.");
-                }
+                Log.e(TAG, "❌ Lỗi kết nối Socket: " + ((Exception) args[0]).getMessage());
             }
         });
 
@@ -112,17 +97,38 @@ public class SocketClient {
                 Log.w(TAG, "⚠️ Socket đã ngắt kết nối.")
         );
 
-        mSocket.on("notify", args -> {
+        /* =======================================================
+           1. LẮNG NGHE DANH SÁCH THÔNG BÁO (Lúc mới connect)
+           Server backend của bạn tự động emit cái này sau khi verify token
+           ======================================================= */
+        mSocket.on("init_notifications", args -> {
             try {
-                JSONObject data = (JSONObject) args[0];
-                Log.d(TAG, "📩 Socket nhận tin: " + data.toString());
+                // Backend trả về Array, nên ép kiểu sang JSONArray
+                JSONArray data = (JSONArray) args[0];
+                Log.d(TAG, "📥 Socket nhận danh sách init: " + data.length() + " items");
 
-                // 🔥 BẮN EVENT RA TOÀN APP
-                // post() có thể gọi từ background thread, các Activity sẽ nhận được
+                // Bắn EventBus chứa JSONArray sang Activity
                 EventBus.getDefault().post(new NotifyEvent(data));
 
             } catch (Exception e) {
-                Log.e(TAG, "Lỗi parse data notify", e);
+                Log.e(TAG, "Lỗi parse init_notifications", e);
+            }
+        });
+
+        /* =======================================================
+           2. LẮNG NGHE THÔNG BÁO MỚI (Realtime)
+           ======================================================= */
+        mSocket.on("notify", args -> {
+            try {
+                // Backend trả về Object lẻ
+                JSONObject data = (JSONObject) args[0];
+                Log.d(TAG, "🔔 Socket nhận notify mới: " + data.toString());
+
+                // Bắn EventBus chứa JSONObject sang Activity
+                EventBus.getDefault().post(new NotifyEvent(data));
+
+            } catch (Exception e) {
+                Log.e(TAG, "Lỗi parse notify lẻ", e);
             }
         });
     }
@@ -132,7 +138,6 @@ public class SocketClient {
             mSocket.disconnect();
             mSocket.off();
             mSocket = null;
-            Log.d(TAG, "🛑 Đã đóng kết nối Socket.");
         }
     }
 
@@ -144,3 +149,4 @@ public class SocketClient {
         return mSocket != null && mSocket.connected();
     }
 }
+

@@ -72,11 +72,56 @@ public class NotificationAdapter extends RecyclerView.Adapter<NotificationAdapte
         }
 
         public void bind(Notify notify) {
-            // Gán dữ liệu vào View
-            // Ví dụ: binding.tvContent.setText(notify.getContent());
-            // binding.tvTime.setText(...);
 
-            // Xử lý click
+            String senderName = "Người dùng"; // Mặc định nếu null
+            String content = "";
+            String type = notify.getType();
+            if (type == null) type = "";
+            switch (type) {
+                case "POST":
+                    content = "<b>" + senderName + "</b>" + " đã đăng tải một bài viết.";
+                    break;
+
+                case "LIKE":
+                    content = "<b>" + senderName + "</b>" + " đã thích bài viết của bạn.";
+                    break;
+
+                case "COMMENT":
+                    content = "<b>" + senderName + "</b>" + " đã bình luận về bài viết của bạn.";
+                    break;
+
+                default:
+                    // Trường hợp không xác định hoặc mặc định
+                    content = "<b>" + senderName + "</b>" + " đã có một hoạt động mới.";
+                    break;
+            }
+
+            // ---------------------------------------------------------
+            // 2. HIỂN THỊ LÊN VIEW (Dùng Html để in đậm tên User)
+            // ---------------------------------------------------------
+
+            // Sử dụng Html.fromHtml để render thẻ <b> (in đậm)
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+                binding.tvContent.setText(android.text.Html.fromHtml(content, android.text.Html.FROM_HTML_MODE_LEGACY));
+            } else {
+                binding.tvContent.setText(android.text.Html.fromHtml(content));
+            }
+
+            // ---------------------------------------------------------
+            // 3. XỬ LÝ THỜI GIAN (Giữ nguyên code cũ của bạn)
+            // ---------------------------------------------------------
+            if (notify.getCreatedAt() != null) {
+                CharSequence niceDateStr = android.text.format.DateUtils.getRelativeTimeSpanString(
+                        notify.getCreatedAt().getTime(),
+                        System.currentTimeMillis(),
+                        android.text.format.DateUtils.MINUTE_IN_MILLIS
+                );
+                binding.tvTime.setText(niceDateStr);
+            }
+
+            // ---------------------------------------------------------
+            // 4. SỰ KIỆN CLICK
+            // ---------------------------------------------------------
             binding.getRoot().setOnClickListener(v -> listener.onItemClick(notify));
         }
     }

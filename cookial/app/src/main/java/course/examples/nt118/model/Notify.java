@@ -1,48 +1,41 @@
 package course.examples.nt118.model;
 
+import android.util.Log;
 import com.google.gson.annotations.SerializedName;
 import java.io.Serializable;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
+import java.util.TimeZone;
 
 public class Notify implements Serializable {
 
-    // Map trường "_id" từ MongoDB sang biến "id" trong Java
     @SerializedName("_id")
     private String id;
 
-    // Backend gửi "userID" -> map sang "userId"
     @SerializedName("userID")
     private String userId;
 
-    // ⚠️ QUAN TRỌNG: Backend gửi "actorID" (chữ D hoa), cần map chính xác
     @SerializedName("actorID")
     private String actorId;
 
-    // ⚠️ QUAN TRỌNG: Backend gửi "targetID" (chữ D hoa)
     @SerializedName("targetID")
     private String targetId;
 
     @SerializedName("type")
-    private String type; // Các loại: "new_post", "like", "comment", "reply", "follow"
+    private String type;
 
     @SerializedName("isRead")
     private boolean isRead;
 
+    // Giữ nguyên là String để Gson hứng dữ liệu thô từ Server không bị lỗi
     @SerializedName("createdAt")
     private String createdAt;
 
     // ================== CONSTRUCTORS ==================
 
     public Notify() {
-    }
-
-    public Notify(String id, String userId, String actorId, String targetId, String type, boolean isRead, String createdAt) {
-        this.id = id;
-        this.userId = userId;
-        this.actorId = actorId;
-        this.targetId = targetId;
-        this.type = type;
-        this.isRead = isRead;
-        this.createdAt = createdAt;
     }
 
     // ================== GETTERS & SETTERS ==================
@@ -95,43 +88,50 @@ public class Notify implements Serializable {
         isRead = read;
     }
 
-    public String getCreatedAt() {
-        return createdAt;
+    /**
+     * 🔥 QUAN TRỌNG: Hàm này đã được sửa.
+     * Nó sẽ parse chuỗi ISO 8601 từ Server thành đối tượng Date của Java.
+     * Giúp Activity so sánh được ngày tháng.
+     */
+    public Date getCreatedAt() {
+        if (createdAt == null) return new Date(); // Trả về thời gian hiện tại nếu null
+
+        // Định dạng ngày tháng chuẩn ISO 8601 của MongoDB/NodeJS
+        // Ví dụ: 2023-12-16T10:00:00.000Z
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US);
+        sdf.setTimeZone(TimeZone.getTimeZone("UTC")); // Server lưu giờ UTC
+
+        try {
+            return sdf.parse(createdAt);
+        } catch (ParseException e) {
+            Log.e("NotifyModel", "Lỗi parse ngày tháng: " + createdAt);
+            return new Date(); // Fallback về hiện tại nếu lỗi
+        }
     }
 
+    // Hàm setter vẫn nhận String (để Gson dùng hoặc khi set thủ công)
     public void setCreatedAt(String createdAt) {
         this.createdAt = createdAt;
     }
 
     // ================== HELPER METHODS ==================
 
-    // Hàm hỗ trợ tạo nội dung hiển thị nhanh
     public String getDescription() {
         if (type == null) return "Có thông báo mới";
 
         switch (type) {
             case "new_post":
-                return "đã đăng một bài viết mới.";
+                return "đã đăng bài viết mới.";
             case "like":
                 return "đã thích bài viết của bạn.";
             case "comment":
-                return "đã bình luận về bài viết của bạn.";
+                return "đã bình luận bài viết.";
             case "reply":
-                return "đã trả lời bình luận của bạn.";
+                return "đã trả lời bình luận.";
             case "follow":
-                return "đã bắt đầu theo dõi bạn.";
+                return "đã theo dõi bạn.";
             default:
                 return "đã tương tác với bạn.";
         }
-    }
-
-    @Override
-    public String toString() {
-        return "Notify{" +
-                "id='" + id + '\'' +
-                ", type='" + type + '\'' +
-                ", actorId='" + actorId + '\'' +
-                ", targetId='" + targetId + '\'' +
-                '}';
     }
 }

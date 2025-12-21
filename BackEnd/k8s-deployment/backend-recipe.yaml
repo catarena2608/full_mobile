@@ -26,5 +26,6 @@ spec:
       containers:
         - name: backend-recipe
           image: catarena/backend_recipe:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 5001
