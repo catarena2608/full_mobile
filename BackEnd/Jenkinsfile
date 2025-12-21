@@ -4,7 +4,7 @@ pipeline {
     parameters {
         choice(
             name: 'SERVICE_NAME', 
-            choices: ['BackEnd', 'payment-service', 'product-service', 'notification-service'], 
+            choices: ['backend-auth', 'backend-notify', 'backend-post', 'backend-recipe', 'backend-user', 'backend-static', 'gateway', 'gatewayadmin'], 
             description: 'Chọn Microservice cần Build và Deploy'
         )
     }
