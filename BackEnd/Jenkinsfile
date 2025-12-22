@@ -20,8 +20,13 @@ pipeline {
         // Cấu hình đường dẫn
         SERVICE_PATH = "BackEnd/${params.SERVICE_NAME}/" 
         
-        // Image luôn là latest
+        // Image name
         IMAGE_NAME = "${DOCKER_REGISTRY}/${params.SERVICE_NAME}:latest"
+        
+        // Cấu hình Google Cloud (Nên đưa ra biến để dễ sửa)
+        GCP_PROJECT_ID = "mobile-project-477308" // Đã xóa dấu cách thừa
+        GCP_CLUSTER_NAME = "mobile-cluster"
+        GCP_ZONE = "asia-northeast1"
     }
 
     stages { 
@@ -39,10 +44,11 @@ pipeline {
                             if (fileExists(env.SERVICE_PATH)) {
                                 dir(env.SERVICE_PATH) { 
                                     sh "npm install"
+                                    // Bỏ qua lỗi audit để pipeline chạy tiếp (nếu cần chặn thì bỏ || true)
                                     sh "npm audit --audit-level=high || true" 
                                 }
                             } else {
-                                error "Folder not found: ${env.SERVICE_PATH}"
+                                error "❌ Folder not found: ${env.SERVICE_PATH}"
                             }
                         }
                     }
@@ -51,12 +57,13 @@ pipeline {
                 stage('Build & Push Docker') {
                     steps {
                         script {
+                            echo "🐳 Building Docker Image..."
                             // Build tag latest
                             sh "docker build -t ${IMAGE_NAME} ./${env.SERVICE_PATH}"
                             
                             withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
                                 sh 'echo ${PASS} | docker login -u ${USER} --password-stdin'
-                                echo "Pushing image: ${IMAGE_NAME}"
+                                echo "🚀 Pushing image: ${IMAGE_NAME}"
                                 sh "docker push ${IMAGE_NAME}"
                             }
                         }
@@ -64,54 +71,56 @@ pipeline {
                 }
 
                 // =========================================================
-                // 👇 PHẦN DEPLOY K8S ĐÃ SỬA THEO YÊU CẦU
+                // 👇 PHẦN DEPLOY K8S ĐÃ TỐI ƯU (ZERO DOWNTIME)
                 // =========================================================
                 stage('Deploy to K8s') {
                     agent {
                         docker {
-                            image 'catarena/gcloud-agent:latest' 
+                            image 'catarena/gcloud-agent:latest'
+                            // Mount docker socket nếu cần dùng docker trong agent này (tuỳ chọn)
+                            // args '-v /var/run/docker.sock:/var/run/docker.sock' 
                         }
                     }
                     steps {
-                        withCredentials([file(credentialsId: 'gcp-k8s-developer', variable: 'GCP_KEY_FILE')]) {
+                        withCredentials([file(credentialsId: 'k8s-mobile-cluster', variable: 'GCP_KEY_FILE')]) {
                             script {
+                                echo "=== DEPLOYING: ${params.SERVICE_NAME} ==="
+                                
                                 // 1. Auth GCP
                                 sh 'gcloud auth activate-service-account --key-file=$GCP_KEY_FILE'
-                                sh 'gcloud container clusters get-credentials mobile-cluster --zone asia-northeast1 --project mobile-project-477308'
+                                sh "gcloud container clusters get-credentials ${env.GCP_CLUSTER_NAME} --zone ${env.GCP_ZONE} --project ${env.GCP_PROJECT_ID}"
                                 
-                                // Định nghĩa file YAML
+                                // Định nghĩa biến
                                 def yamlFile = "BackEnd/k8s-deployment/${params.SERVICE_NAME}.yaml"
-                                // Tên deployment để check status (phải khớp với metadata.name trong file yaml)
+                                // Lưu ý: Tên Deployment trong file YAML phải đúng format này
                                 def deploymentName = "${params.SERVICE_NAME}-deployment"
 
                                 if (fileExists(yamlFile)) {
                                     try {
-                                        echo "=== DEPLOYING: ${params.SERVICE_NAME} ==="
-
-                                        // 2. XÓA CŨ (Hard Reset)
-                                        // Dùng -f yamlFile để K8s tự đọc tên resource cần xóa từ file, chính xác hơn là đoán tên
-                                        echo "🗑️ Deleting old resources..."
-                                        sh "kubectl delete -f ${yamlFile} --namespace ${env.KUBE_NAMESPACE} --ignore-not-found=true"
+                                        // 2. APPLY (Update cấu hình nếu có thay đổi trong file YAML)
+                                        // Không dùng Delete để tránh downtime
+                                        echo "📄 Applying configuration..."
+                                        sh "kubectl apply -f ${yamlFile} --namespace ${env.KUBE_NAMESPACE}"
                                         
-                                        // 3. APPLY MỚI
-                                        // Chờ 5s để K8s dọn dẹp Pod cũ sạch sẽ
-                                        sleep 5
-                                        echo "🚀 Applying new configuration..."
-                                        sh "kubectl apply -f ${yamlFile} --namespace ${env.KUBE_NAMESPACE} --record"
+                                        // 3. FORCE RESTART (Quan trọng khi dùng tag :latest)
+                                        // Lệnh này ép K8s pull lại image mới nhất và thay thế dần các Pod cũ
+                                        echo "🔄 Rolling Restart to update image..."
+                                        sh "kubectl rollout restart deployment/${deploymentName} --namespace ${env.KUBE_NAMESPACE}"
                                         
                                         // 4. VERIFY
-                                        echo "⏳ Waiting for rollout..."
+                                        echo "⏳ Waiting for rollout to finish..."
                                         sh "kubectl rollout status deployment/${deploymentName} --namespace ${env.KUBE_NAMESPACE} --timeout=2m"
                                         
                                         echo "✅ Deploy SUCCESS!"
 
                                     } catch (e) {
                                         echo "❌ Deployment FAILED: ${e.message}"
+                                        echo "💡 Gợi ý: Kiểm tra xem tên Deployment trong file YAML có khớp với '${deploymentName}' không?"
                                         currentBuild.result = 'FAILURE'
                                         error("Deploy failed")
                                     }
                                 } else {
-                                    error "YAML File not found at: ${yamlFile}"
+                                    error "❌ YAML File not found at: ${yamlFile}"
                                 }
                             }
                         }   
@@ -123,6 +132,7 @@ pipeline {
     post {
         always {
             script {
+                echo "🧹 Cleaning up local docker images..."
                 sh "docker rmi ${env.IMAGE_NAME} || true"
             }
         }
