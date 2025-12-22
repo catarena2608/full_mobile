@@ -25,3 +25,4 @@ mongoose.connect(process.env.MONGO_URI)
 // Kết nối RabbitMQ trước khi chạy server
 connectRabbitMQ();
 app.listen(3001, () => console.log("🚀 Auth service running on port 3001"));
+console.log("da deploy image moi!")
