@@ -20,19 +20,29 @@ pipeline {
         // Cấu hình đường dẫn
         SERVICE_PATH = "BackEnd/${params.SERVICE_NAME}/" 
         
-        // Image name
-        IMAGE_NAME = "${DOCKER_REGISTRY}/${params.SERVICE_NAME}:latest"
-        
-        // Cấu hình Google Cloud (Nên đưa ra biến để dễ sửa)
-        GCP_PROJECT_ID = "mobile-project-477308" // Đã xóa dấu cách thừa
+        // Cấu hình Google Cloud
+        GCP_PROJECT_ID = "mobile-project-477308"
         GCP_CLUSTER_NAME = "mobile-cluster"
         GCP_ZONE = "asia-southeast1-a"
+        
+        // 👇 KHAI BÁO BIẾN ĐỂ LƯU COMMIT HASH (Sẽ gán giá trị ở stage Init)
+        COMMIT_HASH = ""
+        IMAGE_TAGGED = ""
     }
 
     stages { 
-        stage('Checkout') {
+        stage('Init & Checkout') {
             steps {
                 checkout scm
+                script {
+                    // 👇 Lấy 7 ký tự đầu của Git Commit Hash (Ví dụ: a1b2c3d)
+                    env.COMMIT_HASH = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
+                    // Tạo tên image với tag unique
+                    env.IMAGE_TAGGED = "${DOCKER_REGISTRY}/${params.SERVICE_NAME}:${env.COMMIT_HASH}"
+                    
+                    echo "🔖 Current Commit Hash: ${env.COMMIT_HASH}"
+                    echo "📦 Docker Image will be: ${env.IMAGE_TAGGED}"
+                }
             }
         }
         
@@ -44,7 +54,6 @@ pipeline {
                             if (fileExists(env.SERVICE_PATH)) {
                                 dir(env.SERVICE_PATH) { 
                                     sh "npm install"
-                                    // Bỏ qua lỗi audit để pipeline chạy tiếp (nếu cần chặn thì bỏ || true)
                                     sh "npm audit --audit-level=high || true" 
                                 }
                             } else {
@@ -57,70 +66,72 @@ pipeline {
                 stage('Build & Push Docker') {
                     steps {
                         script {
-                            echo "🐳 Building Docker Image..."
-                            // Build tag latest
-                            sh "docker build -t ${IMAGE_NAME} ./${env.SERVICE_PATH}"
+                            echo "🐳 Building Docker Image: ${env.IMAGE_TAGGED}"
+                            
+                            // Build với tag là Commit Hash
+                            sh "docker build -t ${env.IMAGE_TAGGED} ./${env.SERVICE_PATH}"
                             
                             withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
                                 sh 'echo ${PASS} | docker login -u ${USER} --password-stdin'
-                                echo "🚀 Pushing image: ${IMAGE_NAME}"
-                                sh "docker push ${IMAGE_NAME}"
+                                echo "🚀 Pushing image..."
+                                sh "docker push ${env.IMAGE_TAGGED}"
                             }
                         }
                     }
                 }
 
-                // =========================================================
-                // 👇 PHẦN DEPLOY K8S ĐÃ TỐI ƯU (ZERO DOWNTIME)
-                // =========================================================
                 stage('Deploy to K8s') {
                     agent {
                         docker {
                             image 'catarena/gcloud-agent:latest'
-                            // Mount docker socket nếu cần dùng docker trong agent này (tuỳ chọn)
-                            // args '-v /var/run/docker.sock:/var/run/docker.sock' 
                         }
                     }
                     steps {
-                        withCredentials([file(credentialsId: 'k8s-mobile-cluster', variable: 'GCP_KEY_FILE')]) {
+                        withCredentials([googleCredentials(credentialsId: 'k8s-mobile-cluster', variable: 'GCP_KEY_FILE')]) {
                             script {
-                                echo "=== DEPLOYING: ${params.SERVICE_NAME} ==="
+                                echo "=== DEPLOYING VERSION: ${env.COMMIT_HASH} ==="
                                 
                                 // 1. Auth GCP
                                 sh 'gcloud auth activate-service-account --key-file=$GCP_KEY_FILE'
                                 sh "gcloud container clusters get-credentials ${env.GCP_CLUSTER_NAME} --zone ${env.GCP_ZONE} --project ${env.GCP_PROJECT_ID}"
                                 
-                                // Định nghĩa biến
                                 def yamlFile = "BackEnd/k8s-deployment/${params.SERVICE_NAME}.yaml"
-                                // Lưu ý: Tên Deployment trong file YAML phải đúng format này
+                                // Tên deployment (phải khớp trong file yaml)
                                 def deploymentName = "${params.SERVICE_NAME}"
+                                // Tên container trong Pod (Thường đặt trùng tên với service/deployment cho dễ nhớ)
+                                // ⚠️ QUAN TRỌNG: Bạn cần mở file YAML xem phần "containers: - name: ???" là gì.
+                                // Nếu chưa biết, hãy giả định nó là ${params.SERVICE_NAME} hoặc xem gợi ý bên dưới.
+                                def containerName = "${params.SERVICE_NAME}" 
 
                                 if (fileExists(yamlFile)) {
                                     try {
-                                        // 2. APPLY (Update cấu hình nếu có thay đổi trong file YAML)
-                                        // Không dùng Delete để tránh downtime
-                                        echo "📄 Applying configuration..."
+                                        // 2. APPLY CẤU HÌNH CƠ BẢN (Service, Ingress, ConfigMap...)
+                                        // Bước này vẫn cần để đảm bảo cấu trúc resource tồn tại
                                         sh "kubectl apply -f ${yamlFile} --namespace ${env.KUBE_NAMESPACE}"
                                         
-                                        // 3. FORCE RESTART (Quan trọng khi dùng tag :latest)
-                                        // Lệnh này ép K8s pull lại image mới nhất và thay thế dần các Pod cũ
-                                        echo "🔄 Rolling Restart to update image..."
-                                        sh "kubectl rollout restart deployment/${deploymentName} --namespace ${env.KUBE_NAMESPACE}"
+                                        // 3. SET IMAGE (KEY POINT 🔑)
+                                        // Lệnh này ghi đè image trong Deployment bằng image có tag hash mới
+                                        // Cú pháp: kubectl set image deployment/<tên-deploy> <tên-container>=<image-mới>
+                                        echo "🔄 Updating Deployment to use image: ${env.IMAGE_TAGGED}"
+                                        
+                                        // Lưu ý: Nếu tên container trong file YAML khác tên service, lệnh này sẽ lỗi.
+                                        // Bạn cần chắc chắn tên container.
+                                        sh "kubectl set image deployment/${deploymentName} ${containerName}=${env.IMAGE_TAGGED} --namespace ${env.KUBE_NAMESPACE}"
                                         
                                         // 4. VERIFY
-                                        echo "⏳ Waiting for rollout to finish..."
+                                        echo "⏳ Waiting for rollout..."
                                         sh "kubectl rollout status deployment/${deploymentName} --namespace ${env.KUBE_NAMESPACE} --timeout=2m"
                                         
-                                        echo "✅ Deploy SUCCESS!"
+                                        echo "✅ Deploy SUCCESS! Version: ${env.COMMIT_HASH}"
 
                                     } catch (e) {
                                         echo "❌ Deployment FAILED: ${e.message}"
-                                        echo "💡 Gợi ý: Kiểm tra xem tên Deployment trong file YAML có khớp với '${deploymentName}' không?"
+                                        echo "💡 Gợi ý lỗi 'Container not found': Hãy kiểm tra file YAML xem 'containers: name' là gì, có khớp với biến containerName không?"
                                         currentBuild.result = 'FAILURE'
                                         error("Deploy failed")
                                     }
                                 } else {
-                                    error "❌ YAML File not found at: ${yamlFile}"
+                                    error "❌ YAML File not found: ${yamlFile}"
                                 }
                             }
                         }   
@@ -132,8 +143,8 @@ pipeline {
     post {
         always {
             script {
-                echo "🧹 Cleaning up local docker images..."
-                sh "docker rmi ${env.IMAGE_NAME} || true"
+                echo "🧹 Cleaning up..."
+                sh "docker rmi ${env.IMAGE_TAGGED} || true"
             }
         }
     }
