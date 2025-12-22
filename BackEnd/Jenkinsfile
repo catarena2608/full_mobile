@@ -26,7 +26,7 @@ pipeline {
         // Cấu hình Google Cloud (Nên đưa ra biến để dễ sửa)
         GCP_PROJECT_ID = "mobile-project-477308" // Đã xóa dấu cách thừa
         GCP_CLUSTER_NAME = "mobile-cluster"
-        GCP_ZONE = "asia-northeast1"
+        GCP_ZONE = "asia-southeast1-a"
     }
 
     stages { 
