@@ -92,7 +92,7 @@ pipeline {
                         }
                     }
                     steps {
-                        withCredentials([googleCredentials(credentialsId: 'k8s-mobile-cluster', variable: 'GCP_KEY_FILE')]) {
+                        withCredentials([file(credentialsId: 'k8s-mobile-cluster', variable: 'GCP_KEY_FILE')]) {
                             script {
                                 echo "=== DEPLOYING VERSION: ${env.COMMIT_HASH} ==="
                                 
