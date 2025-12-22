@@ -93,7 +93,7 @@ pipeline {
                                 // Định nghĩa biến
                                 def yamlFile = "BackEnd/k8s-deployment/${params.SERVICE_NAME}.yaml"
                                 // Lưu ý: Tên Deployment trong file YAML phải đúng format này
-                                def deploymentName = "${params.SERVICE_NAME}-deployment"
+                                def deploymentName = "${params.SERVICE_NAME}"
 
                                 if (fileExists(yamlFile)) {
                                     try {
