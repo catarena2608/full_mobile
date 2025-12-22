@@ -77,7 +77,7 @@ pipeline {
                             script {
                                 // 1. Auth GCP
                                 sh 'gcloud auth activate-service-account --key-file=$GCP_KEY_FILE'
-                                sh 'gcloud container clusters get-credentials nt533-cluster --zone asia-northeast1 --project k8s-cluster-477721'
+                                sh 'gcloud container clusters get-credentials mobile-cluster --zone asia-northeast1 --project k8s-cluster-477721'
                                 
                                 // Định nghĩa file YAML
                                 def yamlFile = "BackEnd/k8s-deployment/${params.SERVICE_NAME}.yaml"
