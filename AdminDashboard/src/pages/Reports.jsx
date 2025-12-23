@@ -58,12 +58,12 @@ const Reports = () => {
 
         try {
             const payload = {
-                reportID: selectedReport._id,
-                targetID: selectedReport.target,
+                userID: selectedReport._id,
+                target: selectedReport.target,
                 type: selectedReport.type, // user, post, comment
                 action: violationType, // warn, ban
                 reason: violationReason,
-                expiry: violationExpiry || null
+                expiredAt: violationExpiry || null
             };
 
             const response = await api.post('/stat/report/violate', payload);
