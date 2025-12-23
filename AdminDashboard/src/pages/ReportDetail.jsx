@@ -70,12 +70,12 @@ const ReportDetail = () => {
 
         try {
             const payload = {
-                reportID: report._id,
-                targetID: report.target,
+                userID: report._id,
+                target: report.target,
                 type: report.type,
                 action: violationType,
                 reason: violationReason,
-                expiry: violationExpiry || null
+                expiredAt: violationExpiry || null
             };
 
             const response = await api.post('/stat/report/violate', payload);
