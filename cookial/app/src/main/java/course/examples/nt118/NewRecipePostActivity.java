@@ -11,6 +11,7 @@ import android.os.Bundle;
 import android.provider.OpenableColumns;
 import android.text.TextUtils;
 import android.util.Log;
+import android.view.Gravity;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.Toast;
@@ -33,7 +34,7 @@ import java.util.List;
 import java.util.Map;
 
 import course.examples.nt118.databinding.ActivityNewRecipePostBinding;
-import course.examples.nt118.model.UploadPostResponse; // [MỚI] Import model này
+import course.examples.nt118.model.UploadPostResponse;
 import course.examples.nt118.network.ApiService;
 import course.examples.nt118.network.RetrofitClient;
 import course.examples.nt118.utils.TokenManager;
@@ -46,7 +47,7 @@ import retrofit2.Response;
 
 public class NewRecipePostActivity extends AppCompatActivity {
 
-    private static final String TAG = NewRecipePostActivity.class.getSimpleName();
+    private static final String TAG = "NewRecipePost";
     private static final int PERMISSION_REQ_CODE = 101;
 
     private ActivityNewRecipePostBinding binding;
@@ -78,7 +79,6 @@ public class NewRecipePostActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        Log.d(TAG, "1. onCreate: Khởi tạo NewRecipePostActivity");
         binding = ActivityNewRecipePostBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
@@ -88,30 +88,6 @@ public class NewRecipePostActivity extends AppCompatActivity {
         initDynamicDataContainers();
         setupListeners();
     }
-
-    protected void onStart() { super.onStart(); Log.d(TAG, "2. onStart"); }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        Log.d(TAG, "3. onResume");
-    }
-
-    @Override
-    protected void onPause() { super.onPause(); Log.d(TAG, "4. onPause"); }
-
-    @Override
-    protected void onStop() { super.onStop(); Log.d(TAG, "5. onStop"); }
-
-    @Override
-    protected void onRestart() { super.onRestart(); Log.d(TAG, "6. onRestart"); }
-
-    @Override
-    protected void onDestroy() { super.onDestroy(); Log.d(TAG, "7. onDestroy"); }
-
-    // ==================================================================
-    // 2. SETUP
-    // ==================================================================
 
     private boolean checkUserSession() {
         currentUserID = TokenManager.getUserId(this);
@@ -125,7 +101,6 @@ public class NewRecipePostActivity extends AppCompatActivity {
 
     private void initUI() {
         progressDialog = new ProgressDialog(this);
-        progressDialog.setMessage("Đang đăng tải công thức...");
         progressDialog.setCancelable(false);
     }
 
@@ -141,19 +116,16 @@ public class NewRecipePostActivity extends AppCompatActivity {
     private void setupListeners() {
         binding.btnBack.setOnClickListener(v -> finish());
         binding.btnSaveDraft.setOnClickListener(v -> Toast.makeText(this, "Tính năng đang phát triển", Toast.LENGTH_SHORT).show());
-
-        binding.txtThumbnailUploadArea.setOnClickListener(v -> {
-            checkPermissionAndPickImage();
-        });
-
+        binding.txtThumbnailUploadArea.setOnClickListener(v -> checkPermissionAndPickImage());
         binding.txtAddIngredient.setOnClickListener(v -> addIngredientRow("base"));
         binding.btnAddStep.setOnClickListener(v -> addGuideStepRow(guideStepFields.size() + 1));
 
-        binding.btnPost.setOnClickListener(v -> attemptUpload());
+        // Nút đăng chính
+        binding.btnPost.setOnClickListener(v -> attemptUploadFlow());
     }
 
     // ==================================================================
-    // 3. DYNAMIC VIEWS
+    // 3. XỬ LÝ GIAO DIỆN ĐỘNG
     // ==================================================================
 
     private void addIngredientRow(String groupKey) {
@@ -182,7 +154,7 @@ public class NewRecipePostActivity extends AppCompatActivity {
     private void addGuideStepRow(int stepNumber) {
         EditText etStep = createStyledEditText("Bước " + stepNumber + ": Nhập hướng dẫn...", 0);
         etStep.setMinLines(2);
-        etStep.setGravity(android.view.Gravity.TOP | android.view.Gravity.START);
+        etStep.setGravity(Gravity.TOP | Gravity.START);
         ((LinearLayout.LayoutParams) etStep.getLayoutParams()).setMargins(0, 24, 0, 0);
 
         guideStepFields.add(etStep);
@@ -206,14 +178,13 @@ public class NewRecipePostActivity extends AppCompatActivity {
     }
 
     // ==================================================================
-    // 4. API UPLOAD FLOW (2 BƯỚC - ĐÃ SỬA: KHÔNG TRUYỀN ID)
+    // 4. LUỒNG XỬ LÝ API (QUAN TRỌNG)
     // ==================================================================
 
-    private void attemptUpload() {
-        // Validation cơ bản
+    private void attemptUploadFlow() {
+        // Validation
         if (TextUtils.isEmpty(binding.editRecipeName.getText())) {
             binding.editRecipeName.setError("Nhập tên món ăn!");
-            binding.editRecipeName.requestFocus();
             return;
         }
         if (thumbnailUri == null) {
@@ -221,17 +192,57 @@ public class NewRecipePostActivity extends AppCompatActivity {
             return;
         }
 
+        progressDialog.setMessage("Bước 1: Đang tạo bài viết...");
         progressDialog.show();
 
-        // --- BƯỚC 1: UPLOAD RECIPE CHI TIẾT ---
-        uploadRecipeDetail();
+        performStep1_CreatePost();
     }
 
-    // BƯỚC 1: Gọi API tạo công thức (Giữ nguyên logic cũ)
-    private void uploadRecipeDetail() {
-        // Chuẩn bị dữ liệu Recipe
+    // BƯỚC 1: Gọi API upload bài viết (Common Post)
+    private void performStep1_CreatePost() {
+        List<MultipartBody.Part> files = prepareImagePart();
+        RequestBody api_type = toRequestBody("Recipe");
         RequestBody api_caption = toRequestBody(binding.editDescription.getText().toString());
-        RequestBody api_postID = toRequestBody("");
+        RequestBody api_tag = toRequestBody("[]");
+        RequestBody api_location = toRequestBody("");
+
+        ApiService apiService = RetrofitClient.getInstance(this).getApiService();
+        apiService.uploadPost(files, api_type, api_caption, api_tag, api_location)
+                .enqueue(new Callback<UploadPostResponse>() {
+                    @Override
+                    public void onResponse(Call<UploadPostResponse> call, Response<UploadPostResponse> response) {
+                        if (response.isSuccessful() && response.body() != null && response.body().isSuccess()) {
+                            // Lấy ID từ trường 'post' trong JSON trả về từ Node.js
+                            String postId = null;
+                            if (response.body().getPost() != null) {
+                                postId = response.body().getPost().get_id(); // Trùng với _id bên Node
+                            }
+
+                            if (!TextUtils.isEmpty(postId)) {
+                                Log.d(TAG, "Step 1 OK. PostID: " + postId);
+                                progressDialog.setMessage("Bước 2: Đang lưu nội dung công thức...");
+                                performStep2_CreateRecipe(postId);
+                            } else {
+                                progressDialog.dismiss();
+                                handleError("Lỗi: Server không trả về Post ID.");
+                            }
+                        } else {
+                            progressDialog.dismiss();
+                            handleError("Lỗi tạo Post: " + response.code());
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(Call<UploadPostResponse> call, Throwable t) {
+                        progressDialog.dismiss();
+                        handleError("Lỗi kết nối bước 1: " + t.getMessage());
+                    }
+                });
+    }
+
+    // BƯỚC 2: Gọi API lưu chi tiết công thức (Recipe Detail) gắn với PostID vừa tạo
+    private void performStep2_CreateRecipe(String postId) {
+        RequestBody api_postID = toRequestBody(postId);
         RequestBody api_name = toRequestBody(binding.editRecipeName.getText().toString());
         RequestBody api_description = toRequestBody(binding.editDescription.getText().toString());
         RequestBody api_ration = toRequestBody(binding.editRation.getText().toString());
@@ -239,82 +250,37 @@ public class NewRecipePostActivity extends AppCompatActivity {
         RequestBody api_ingredients = toRequestBody(generateIngredientsJson());
         RequestBody api_guide = toRequestBody(generateGuideJson());
         RequestBody api_tags = toRequestBody("[]");
+
+        // Gửi kèm ảnh thumbnail lần nữa nếu Backend API Recipe yêu cầu media
         List<MultipartBody.Part> media = prepareImagePart();
 
         ApiService apiService = RetrofitClient.getInstance(this).getApiService();
         apiService.uploadRecipe(
-                api_caption, api_postID, api_name, api_description,
+                toRequestBody(""), api_postID, api_name, api_description,
                 api_ration, api_time, api_ingredients, api_guide, api_tags, media
         ).enqueue(new Callback<UploadPostResponse>() {
             @Override
             public void onResponse(Call<UploadPostResponse> call, Response<UploadPostResponse> response) {
-                // Kiểm tra thành công bước 1
+                progressDialog.dismiss();
                 if (response.isSuccessful() && response.body() != null && response.body().isSuccess()) {
-                    Log.d(TAG, "Step 1 Success (Recipe Created)");
-
-                    // --- CHUYỂN SANG BƯỚC 2: TẠO POST ---
-                    // Không cần truyền ID nữa
-                    uploadPostEntry();
-
+                    Toast.makeText(NewRecipePostActivity.this, "Đăng công thức thành công 🎉", Toast.LENGTH_LONG).show();
+                    setResult(RESULT_OK);
+                    finish();
                 } else {
-                    progressDialog.dismiss();
-                    String msg = response.body() != null ? response.body().getMessage() : String.valueOf(response.code());
-                    handleError("Lỗi tạo Recipe: " + msg);
+                    handleError("Lỗi lưu công thức: " + response.code());
                 }
             }
 
             @Override
             public void onFailure(Call<UploadPostResponse> call, Throwable t) {
                 progressDialog.dismiss();
-                Log.e(TAG, "Step 1 Failed", t);
-                handleError("Lỗi kết nối khi tạo Recipe!");
+                handleError("Lỗi kết nối bước 2: " + t.getMessage());
             }
         });
     }
 
-    // BƯỚC 2: Gọi API tạo bài viết (ĐÃ SỬA POST ENTRY)
-    private void uploadPostEntry() {
-        // 1. Chuẩn bị các trường dữ liệu theo Interface mới
-        List<MultipartBody.Part> files = prepareImagePart(); // Dùng lại ảnh thumbnail
-        RequestBody api_type = toRequestBody("Recipe");      // Type cố định là Recipe
-        RequestBody api_caption = toRequestBody(binding.editDescription.getText().toString());
-        RequestBody api_tag = toRequestBody("[]");
-        RequestBody api_location = toRequestBody("");        // Location để rỗng
-
-        ApiService apiService = RetrofitClient.getInstance(this).getApiService();
-
-        // 2. Gọi hàm uploadPost khớp với Interface
-        apiService.uploadPost(files, api_type, api_caption, api_tag, api_location)
-                .enqueue(new Callback<UploadPostResponse>() {
-                    @Override
-                    public void onResponse(Call<UploadPostResponse> call, Response<UploadPostResponse> response) {
-                        progressDialog.dismiss(); // Tắt loading
-
-                        if (response.isSuccessful() && response.body() != null && response.body().isSuccess()) {
-                            Log.i(TAG, "Step 2 Success. Post Created!");
-                            Toast.makeText(NewRecipePostActivity.this, "Đăng bài thành công!", Toast.LENGTH_LONG).show();
-                            setResult(RESULT_OK);
-                            finish();
-                        } else {
-                            String msg = response.body() != null ? response.body().getMessage() : String.valueOf(response.code());
-                            handleError("Tạo Recipe xong nhưng lỗi đăng Post: " + msg);
-                        }
-                    }
-
-                    @Override
-                    public void onFailure(Call<UploadPostResponse> call, Throwable t) {
-                        progressDialog.dismiss();
-                        Log.e(TAG, "Step 2 Failed", t);
-                        handleError("Lỗi kết nối khi đăng Post!");
-                    }
-                });
-    }
-    private void handleError(String msg) {
-        Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
-    }
-
     // ==================================================================
-    // 5. HELPERS
+    // 5. HELPERS & UTILS
     // ==================================================================
 
     private String generateIngredientsJson() {
@@ -387,13 +353,12 @@ public class NewRecipePostActivity extends AppCompatActivity {
     private void handleImageSelection(Uri uri) {
         this.thumbnailUri = uri;
         String fileName = getFileName(uri);
-        binding.txtThumbnailUploadArea.setText(fileName != null ? "Ảnh: " + fileName : "Đã chọn ảnh");
-        binding.txtThumbnailUploadArea.setCompoundDrawablesWithIntrinsicBounds(0, android.R.drawable.checkbox_on_background, 0, 0);
+        binding.txtThumbnailUploadArea.setText(fileName != null ? "Đã chọn: " + fileName : "Đã chọn ảnh");
     }
 
     private File uriToFile(Uri uri) {
         try (InputStream inputStream = getContentResolver().openInputStream(uri)) {
-            File tempFile = new File(getCacheDir(), "upload_recipe_" + System.currentTimeMillis() + ".jpg");
+            File tempFile = new File(getCacheDir(), "upload_" + System.currentTimeMillis() + ".jpg");
             try (FileOutputStream outputStream = new FileOutputStream(tempFile)) {
                 byte[] buffer = new byte[1024];
                 int len;
@@ -414,5 +379,10 @@ public class NewRecipePostActivity extends AppCompatActivity {
             }
         }
         return result;
+    }
+
+    private void handleError(String msg) {
+        Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
+        Log.e(TAG, msg);
     }
 }
