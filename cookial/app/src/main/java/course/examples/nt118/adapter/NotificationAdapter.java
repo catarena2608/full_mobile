@@ -1,16 +1,20 @@
 package course.examples.nt118.adapter;
 
 import android.content.Context;
+import android.text.Html;
 import android.view.LayoutInflater;
 import android.view.ViewGroup;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.bumptech.glide.Glide;
 import java.util.ArrayList;
 import java.util.List;
 
-import course.examples.nt118.databinding.ItemNotificationBinding; // Đảm bảo import đúng binding của item
+import course.examples.nt118.R;
+import course.examples.nt118.databinding.ItemNotificationBinding;
 import course.examples.nt118.model.Notify;
+import course.examples.nt118.model.UserResponse;
 
 public class NotificationAdapter extends RecyclerView.Adapter<NotificationAdapter.NotificationViewHolder> {
 
@@ -28,20 +32,14 @@ public class NotificationAdapter extends RecyclerView.Adapter<NotificationAdapte
         this.notifyList = new ArrayList<>();
     }
 
-    // Hàm set dữ liệu ban đầu (từ API)
     public void setData(List<Notify> list) {
         this.notifyList = list;
         notifyDataSetChanged();
     }
 
-    // === QUAN TRỌNG: Hàm thêm thông báo mới từ Socket vào đầu danh sách ===
     public void addNotificationToTop(Notify newNotify) {
-        if (notifyList == null) {
-            notifyList = new ArrayList<>();
-        }
-        // Thêm vào vị trí 0 (đầu danh sách)
+        if (notifyList == null) notifyList = new ArrayList<>();
         notifyList.add(0, newNotify);
-        // Thông báo cho RecyclerView biết có item mới chèn vào vị trí 0 -> Có hiệu ứng đẹp
         notifyItemInserted(0);
     }
 
@@ -72,44 +70,61 @@ public class NotificationAdapter extends RecyclerView.Adapter<NotificationAdapte
         }
 
         public void bind(Notify notify) {
+            // 1. Xử lý thông tin người dùng (Actor)
+            String senderName = "Người dùng"; // Tên mặc định
+            String avatarUrl = "";
 
-            String senderName = "Người dùng"; // Mặc định nếu null
+            if (notify.getActor() != null) {
+                UserResponse actor = notify.getActor();
+                if (actor.getName() != null) senderName = actor.getName();
+                if (actor.getAvatar() != null) avatarUrl = actor.getAvatar();
+            }
+
+            // 2. Load Avatar bằng Glide
+            // 🔥 QUAN TRỌNG: Load vào imgAvatar (ImageView), không phải ivUserAvatar (CardView)
+            if (!avatarUrl.isEmpty()) {
+                Glide.with(context)
+                        .load(avatarUrl)
+                        .placeholder(R.drawable.ic_default_avatar) // Đảm bảo file này tồn tại trong drawable
+                        .centerCrop() // Dùng centerCrop để ảnh lấp đầy ImageView
+                        .into(binding.imgAvatar); // <--- ĐÃ SỬA: imgAvatar
+            } else {
+                binding.imgAvatar.setImageResource(R.drawable.ic_default_avatar); // <--- ĐÃ SỬA: imgAvatar
+            }
+
+            // 3. Tạo nội dung thông báo
             String content = "";
             String type = notify.getType();
             if (type == null) type = "";
+
             switch (type) {
                 case "POST":
-                    content = "<b>" + senderName + "</b>" + " đã đăng tải một bài viết.";
+                    content = "<b>" + senderName + "</b>" + " đã đăng một bài viết mới.";
                     break;
-
+                case "like":
                 case "LIKE":
                     content = "<b>" + senderName + "</b>" + " đã thích bài viết của bạn.";
                     break;
-
+                case "comment":
                 case "COMMENT":
-                    content = "<b>" + senderName + "</b>" + " đã bình luận về bài viết của bạn.";
+                    content = "<b>" + senderName + "</b>" + " đã bình luận về bài viết.";
                     break;
-
+                case "follow":
+                    content = "<b>" + senderName + "</b>" + " đã bắt đầu theo dõi bạn.";
+                    break;
                 default:
-                    // Trường hợp không xác định hoặc mặc định
-                    content = "<b>" + senderName + "</b>" + " đã có một hoạt động mới.";
+                    content = "<b>" + senderName + "</b>" + " đã có hoạt động mới.";
                     break;
             }
 
-            // ---------------------------------------------------------
-            // 2. HIỂN THỊ LÊN VIEW (Dùng Html để in đậm tên User)
-            // ---------------------------------------------------------
-
-            // Sử dụng Html.fromHtml để render thẻ <b> (in đậm)
+            // 4. Set Text HTML
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
-                binding.tvContent.setText(android.text.Html.fromHtml(content, android.text.Html.FROM_HTML_MODE_LEGACY));
+                binding.tvContent.setText(Html.fromHtml(content, Html.FROM_HTML_MODE_LEGACY));
             } else {
-                binding.tvContent.setText(android.text.Html.fromHtml(content));
+                binding.tvContent.setText(Html.fromHtml(content));
             }
 
-            // ---------------------------------------------------------
-            // 3. XỬ LÝ THỜI GIAN (Giữ nguyên code cũ của bạn)
-            // ---------------------------------------------------------
+            // 5. Thời gian
             if (notify.getCreatedAt() != null) {
                 CharSequence niceDateStr = android.text.format.DateUtils.getRelativeTimeSpanString(
                         notify.getCreatedAt().getTime(),
@@ -119,9 +134,7 @@ public class NotificationAdapter extends RecyclerView.Adapter<NotificationAdapte
                 binding.tvTime.setText(niceDateStr);
             }
 
-            // ---------------------------------------------------------
-            // 4. SỰ KIỆN CLICK
-            // ---------------------------------------------------------
+            // 6. Click Event
             binding.getRoot().setOnClickListener(v -> listener.onItemClick(notify));
         }
     }

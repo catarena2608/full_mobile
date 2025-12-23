@@ -2,9 +2,11 @@ package course.examples.nt118;
 
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Typeface;
 import android.os.Bundle;
 import android.util.Log;
 import android.util.TypedValue;
+import android.view.View;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -16,8 +18,8 @@ import com.bumptech.glide.Glide;
 import java.util.ArrayList;
 import java.util.List;
 
-import course.examples.nt118.databinding.ActivityRecipePostDetailBinding;
-import course.examples.nt118.model.RecipeResponse; // Import đúng model này
+import course.examples.nt118.databinding.ActivityRecipePostDetailBinding; // Đảm bảo tên file XML là activity_recipe_post_detail.xml
+import course.examples.nt118.model.RecipeResponse;
 import course.examples.nt118.model.UserResponse;
 import course.examples.nt118.network.ApiService;
 import course.examples.nt118.network.RetrofitClient;
@@ -28,36 +30,41 @@ import retrofit2.Response;
 
 public class PostRecipeActivity extends AppCompatActivity {
 
+    private static final String TAG = "PostRecipeActivity";
     private ActivityRecipePostDetailBinding binding;
-    private static final String TAG = PostRecipeActivity.class.getSimpleName();
-    private String currentPostId;
     private ApiService apiService;
+    private String currentPostId;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         binding = ActivityRecipePostDetailBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
+        Log.d(TAG, "onCreate: Activity Created");
 
-        // Khởi tạo API Service
-        apiService = RetrofitClient.getInstance(this).getApiService();
-        currentPostId = getIntent().getStringExtra("POST_ID");
-
-        if (currentPostId != null) {
-            fetchRecipeDetails(currentPostId);
-        } else {
-            Toast.makeText(this, "Error: Post ID not found", Toast.LENGTH_SHORT).show();
-            finish();
-        }
-
+        initData();
         setupListeners();
     }
 
+    private void initData() {
+        apiService = RetrofitClient.getInstance(this).getApiService();
+
+        // Lấy PostID từ Intent truyền sang
+        currentPostId = getIntent().getStringExtra("POST_ID");
+
+        if (currentPostId != null && !currentPostId.isEmpty()) {
+            loadRecipeDetails(currentPostId);
+        } else {
+            Toast.makeText(this, "Không tìm thấy bài viết", Toast.LENGTH_SHORT).show();
+            finish();
+        }
+    }
+
     private void setupListeners() {
-        // 1. Back Button
+        // 1. Nút Back
         binding.btnBack.setOnClickListener(v -> finish());
 
-        // 2. Cook Now Button -> Go to Cooking Mode
+        // 2. Nút Nấu Ngay -> Chuyển sang chế độ nấu ăn
         binding.btnCookNow.setOnClickListener(v -> {
             if (currentPostId != null) {
                 Intent intent = new Intent(PostRecipeActivity.this, CookingModeActivity.class);
@@ -66,47 +73,47 @@ public class PostRecipeActivity extends AppCompatActivity {
             }
         });
 
-        // 3. Customize Button (Placeholder)
-        binding.btnCustomize.setOnClickListener(v ->
-                Toast.makeText(this, "Customize feature coming soon!", Toast.LENGTH_SHORT).show()
-        );
 
-        // 4. Menu More (Placeholder)
+
+        // 4. Menu More
         binding.btnMenuMore.setOnClickListener(v ->
-                Toast.makeText(this, "More options...", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Tùy chọn khác", Toast.LENGTH_SHORT).show()
         );
     }
 
-    private void fetchRecipeDetails(String postId) {
+    // ---------------------------------------------------------
+    // API CALLS
+    // ---------------------------------------------------------
+
+    private void loadRecipeDetails(String postId) {
+        // Gọi API: GET recipe/{postID}
         apiService.getRecipeByPostID(postId).enqueue(new Callback<RecipeResponse>() {
             @Override
             public void onResponse(Call<RecipeResponse> call, Response<RecipeResponse> response) {
-                if (response.isSuccessful() && response.body() != null) {
-
-                    // [ĐÃ SỬA] Dùng RecipeResponse.Recipe
+                if (response.isSuccessful() && response.body() != null && response.body().success) {
                     RecipeResponse.Recipe recipe = response.body().getRecipe();
-
                     if (recipe != null) {
-                        displayRecipeDetails(recipe);
-                        fetchAuthorInfo(recipe.getUserID());
+                        displayRecipeInfo(recipe);
+                        // Sau khi có recipe thì lấy thông tin người đăng
+                        loadAuthorInfo(recipe.getUserID());
                     }
                 } else {
-                    Toast.makeText(PostRecipeActivity.this, "Failed to load recipe details", Toast.LENGTH_SHORT).show();
-                    Log.e(TAG, "Response Error: " + response.code());
+                    Log.e(TAG, "Load Recipe Failed: " + response.code());
+                    Toast.makeText(PostRecipeActivity.this, "Không tải được nội dung bài viết", Toast.LENGTH_SHORT).show();
                 }
             }
 
             @Override
             public void onFailure(Call<RecipeResponse> call, Throwable t) {
-                Toast.makeText(PostRecipeActivity.this, "Network Error", Toast.LENGTH_SHORT).show();
                 Log.e(TAG, "Network Error", t);
+                Toast.makeText(PostRecipeActivity.this, "Lỗi kết nối mạng", Toast.LENGTH_SHORT).show();
             }
         });
     }
 
-    private void fetchAuthorInfo(String userId) {
+    private void loadAuthorInfo(String userId) {
         if (userId == null) return;
-        String myId = TokenManager.getUserId(this);
+        String myId = TokenManager.getUserId(this); // Lấy ID người dùng hiện tại để check follow (nếu cần)
 
         apiService.getUserById(userId, myId).enqueue(new Callback<UserResponse>() {
             @Override
@@ -115,9 +122,8 @@ public class PostRecipeActivity extends AppCompatActivity {
                     UserResponse user = response.body().getRealUser();
                     if (user != null) {
                         binding.txtUsernameRecipeInfo.setText(user.getName());
-                        binding.txtUserId.setText("@" + user.getName());
+                        binding.txtUserId.setText("@" + user.getName()); // Giả sử model User có field username
 
-                        // Load Avatar
                         Glide.with(PostRecipeActivity.this)
                                 .load(user.getAvatar())
                                 .placeholder(android.R.drawable.sym_def_app_icon)
@@ -129,106 +135,117 @@ public class PostRecipeActivity extends AppCompatActivity {
 
             @Override
             public void onFailure(Call<UserResponse> call, Throwable t) {
-                // Ignore or log
+                Log.e(TAG, "Load Author Failed", t);
             }
         });
     }
 
-    // [ĐÃ SỬA] Tham số là RecipeResponse.Recipe
-    private void displayRecipeDetails(RecipeResponse.Recipe recipe) {
-        // 1. Basic Info
+    // ---------------------------------------------------------
+    // UI DISPLAY LOGIC
+    // ---------------------------------------------------------
+
+    private void displayRecipeInfo(RecipeResponse.Recipe recipe) {
+        // 1. Tiêu đề
         binding.txtRecipeTitle.setText(recipe.getName());
 
-        // Load Thumbnail Image
-        if (recipe.getMedia() != null && !recipe.getMedia().isEmpty()) {
-            Glide.with(this)
-                    .load(recipe.getMedia().get(0)) // Load first image
-                    .centerCrop()
-                    .into(binding.imgRecipeThumbnail);
+        // 2. Hình ảnh Thumbnail
+        String imgUrl = recipe.getThumbnail();
+        // Fallback: Nếu thumbnail rỗng thì lấy ảnh đầu tiên trong media (nếu có)
+        if ((imgUrl == null || imgUrl.isEmpty()) && recipe.getMedia() != null && !recipe.getMedia().isEmpty()) {
+            imgUrl = recipe.getMedia().get(0);
         }
 
-        // Ration & Time
-        String rationTime = "Khẩu phần: " + recipe.getRation() + " người | Thời gian: " + recipe.getTime();
-        binding.txtRationTime.setText(rationTime);
+        Glide.with(this)
+                .load(imgUrl)
+                .centerCrop()
+                .placeholder(android.R.drawable.ic_menu_gallery)
+                .into(binding.imgRecipeThumbnail);
 
-        // 2. Ingredients (Dynamic List)
-        displayIngredients(recipe);
+        // 3. Thông tin chung (Khẩu phần & Thời gian)
+        String info = String.format("Khẩu phần: %s người | Thời gian: %s",
+                recipe.getRation(),
+                recipe.getTime());
+        binding.txtRationTime.setText(info);
 
-        // 3. Guide Steps (Dynamic List)
-        displayGuideSteps(recipe);
+        // 4. Render danh sách nguyên liệu
+        renderIngredients(recipe.getIngre());
+
+        // 5. Render các bước hướng dẫn
+        renderGuideSteps(recipe.getGuide());
     }
 
-    // [ĐÃ SỬA] Tham số là RecipeResponse.Recipe
-    private void displayIngredients(RecipeResponse.Recipe recipe) {
-        LinearLayout ingredientsLayout = binding.layoutIngredientsList;
-        ingredientsLayout.removeAllViews();
+    private void renderIngredients(RecipeResponse.Ingredients ingredients) {
+        binding.layoutIngredientsList.removeAllViews();
 
-        // [ĐÃ SỬA] Dùng RecipeResponse.Ingredients
-        RecipeResponse.Ingredients ingredients = recipe.getIngre();
         if (ingredients == null) return;
 
-        // [ĐÃ SỬA] List<List<RecipeResponse.Ingredient>>
-        List<List<RecipeResponse.Ingredient>> groups = new ArrayList<>();
+        List<RecipeResponse.Ingredient> allIngredients = new ArrayList<>();
+        // Gom nhóm nguyên liệu lại (Tùy logic backend trả về null hay empty list)
+        if (ingredients.getBase() != null) allIngredients.addAll(ingredients.getBase());
+        if (ingredients.getComple() != null) allIngredients.addAll(ingredients.getComple());
+        if (ingredients.getSpice() != null) allIngredients.addAll(ingredients.getSpice());
+        if (ingredients.getOther() != null) allIngredients.addAll(ingredients.getOther());
 
-        if (ingredients.getBase() != null) groups.add(ingredients.getBase());
-        if (ingredients.getComple() != null) groups.add(ingredients.getComple());
-        if (ingredients.getSpice() != null) groups.add(ingredients.getSpice());
-        if (ingredients.getOther() != null) groups.add(ingredients.getOther());
+        if (allIngredients.isEmpty()) {
+            TextView emptyText = new TextView(this);
+            emptyText.setText("Không có thông tin nguyên liệu.");
+            binding.layoutIngredientsList.addView(emptyText);
+            return;
+        }
 
-        Context context = this;
-        // [ĐÃ SỬA] Vòng lặp
-        for (List<RecipeResponse.Ingredient> groupList : groups) {
-            for (RecipeResponse.Ingredient ingredient : groupList) {
-                TextView ingredientView = new TextView(context);
-
-                String text = "• " + ingredient.getQuantity() + " " + ingredient.getName();
-                ingredientView.setText(text);
-                ingredientView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
-                ingredientView.setTextColor(getResources().getColor(android.R.color.black));
-                ingredientView.setPadding(0, 8, 0, 8);
-
-                ingredientsLayout.addView(ingredientView);
-            }
+        for (RecipeResponse.Ingredient item : allIngredients) {
+            TextView tv = new TextView(this);
+            // Format: • 500g Thịt ba chỉ
+            String text = "• " + item.getQuantity() + " " + item.getName();
+            tv.setText(text);
+            tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+            tv.setTextColor(getColor(android.R.color.black));
+            tv.setPadding(0, 8, 0, 8); // Margin top/bottom nhẹ
+            binding.layoutIngredientsList.addView(tv);
         }
     }
 
-    // [ĐÃ SỬA] Tham số là RecipeResponse.Recipe
-    private void displayGuideSteps(RecipeResponse.Recipe recipe) {
-        LinearLayout guideLayout = binding.layoutGuideSteps;
-        guideLayout.removeAllViews();
+    private void renderGuideSteps(List<RecipeResponse.Step> steps) {
+        binding.layoutGuideSteps.removeAllViews();
 
-        // [ĐÃ SỬA] List<RecipeResponse.Step>
-        List<RecipeResponse.Step> steps = recipe.getGuide();
-        if (steps == null || steps.isEmpty()) return;
+        if (steps == null || steps.isEmpty()) {
+            TextView emptyText = new TextView(this);
+            emptyText.setText("Chưa có hướng dẫn chi tiết.");
+            binding.layoutGuideSteps.addView(emptyText);
+            return;
+        }
 
-        Context context = this;
-        // [ĐÃ SỬA] Vòng lặp
         for (RecipeResponse.Step step : steps) {
-            LinearLayout stepContainer = new LinearLayout(context);
-            stepContainer.setOrientation(LinearLayout.VERTICAL);
-            stepContainer.setPadding(0, 0, 0, 24);
+            LinearLayout stepLayout = new LinearLayout(this);
+            stepLayout.setOrientation(LinearLayout.VERTICAL);
+            stepLayout.setPadding(0, 0, 0, 32); // Khoảng cách giữa các bước
 
-            // Step Title
-            TextView stepTitle = new TextView(context);
-            stepTitle.setText("Bước " + step.getStep());
-            stepTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
-            stepTitle.setTypeface(null, android.graphics.Typeface.BOLD);
-            stepContainer.addView(stepTitle);
+            // Tiêu đề bước: "Bước 1"
+            TextView titleTv = new TextView(this);
+            titleTv.setText("Bước " + step.getStep());
+            titleTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+            titleTv.setTypeface(null, Typeface.BOLD);
+            titleTv.setTextColor(getColor(android.R.color.black));
+            stepLayout.addView(titleTv);
 
-            // Step Content
-            TextView stepContent = new TextView(context);
-            stepContent.setText(step.getContent());
-            stepContent.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
-            stepContent.setTextColor(getResources().getColor(android.R.color.darker_gray));
-            stepContainer.addView(stepContent);
+            // Nội dung bước
+            TextView contentTv = new TextView(this);
+            contentTv.setText(step.getContent());
+            contentTv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
+            contentTv.setTextColor(getColor(android.R.color.darker_gray));
+            contentTv.setPadding(0, 8, 0, 0);
+            stepLayout.addView(contentTv);
 
-            guideLayout.addView(stepContainer);
+            binding.layoutGuideSteps.addView(stepLayout);
         }
     }
 
-    @Override protected void onStart() { super.onStart(); Log.d(TAG, "2. onStart"); }
-    @Override protected void onResume() { super.onResume(); Log.d(TAG, "3. onResume"); }
-    @Override protected void onPause() { super.onPause(); Log.d(TAG, "4. onPause"); }
-    @Override protected void onStop() { super.onStop(); Log.d(TAG, "5. onStop"); }
-    @Override protected void onDestroy() { super.onDestroy(); Log.d(TAG, "7. onDestroy"); }
+    // ---------------------------------------------------------
+    // LIFECYCLE LOGGING
+    // ---------------------------------------------------------
+    @Override protected void onStart() { super.onStart(); Log.d(TAG, "onStart"); }
+    @Override protected void onResume() { super.onResume(); Log.d(TAG, "onResume"); }
+    @Override protected void onPause() { super.onPause(); Log.d(TAG, "onPause"); }
+    @Override protected void onStop() { super.onStop(); Log.d(TAG, "onStop"); }
+    @Override protected void onDestroy() { super.onDestroy(); Log.d(TAG, "onDestroy"); }
 }

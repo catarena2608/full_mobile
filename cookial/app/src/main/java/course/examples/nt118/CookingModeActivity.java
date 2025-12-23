@@ -6,10 +6,14 @@ import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.speech.RecognizerIntent;
 import android.speech.tts.TextToSpeech;
+import android.util.Log;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.OnBackPressedCallback;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import java.util.ArrayList;
@@ -25,37 +29,90 @@ import retrofit2.Response;
 
 public class CookingModeActivity extends AppCompatActivity {
 
-    TextView stepCounterTextView, stepNumberTextView, instructionTextView, timerTextView, tipTextView;
-    ImageButton nextButton, prevButton, pauseButton, micButton;
-
-    // Dùng List Step từ model RecipeResponse
-    List<RecipeResponse.Step> steps;
-    int currentStep = 0;
-
-    CountDownTimer countDownTimer;
-    long timeRemaining = 0;
-    boolean isTimerRunning = false;
-
-    TextToSpeech tts;
-
+    private static final String TAG = "CookingModeLifecycle";
     private static final int VOICE_RECOGNITION_CODE = 999;
+
+    // UI Components
+    private TextView stepCounterTextView, stepNumberTextView, instructionTextView, timerTextView, tipTextView;
+    private ImageButton nextButton, prevButton, pauseButton, micButton;
+    private ImageView backButton;
+
+    // Data
+    private List<RecipeResponse.Step> steps;
+    private int currentStep = 0;
+
+    // Helpers
+    private CountDownTimer countDownTimer;
+    private long timeRemaining = 0;
+    private boolean isTimerRunning = false;
+    private TextToSpeech tts;
+
+    // --------------------------------------------------------------------------
+    // LIFECYCLE METHODS
+    // --------------------------------------------------------------------------
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        Log.d(TAG, "onCreate: Activity Created");
         setContentView(R.layout.activity_cooking_mode);
 
         initViews();
         setupTTS();
+        setupBackNavigation();
         loadRecipeFromBackend();
-
-        pauseButton.setOnClickListener(v -> toggleTimer());
-        nextButton.setOnClickListener(v -> showNextStep());
-        prevButton.setOnClickListener(v -> showPrevStep());
-
-        // 👉 Nút mic để điều khiển giọng nói
-        micButton.setOnClickListener(v -> startVoiceControl());
+        setupEvents();
     }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        Log.d(TAG, "onStart: Activity become visible");
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        Log.d(TAG, "onResume: Activity interacting with user");
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        Log.d(TAG, "onPause: Activity partially obscured");
+        if (tts != null && tts.isSpeaking()) {
+            tts.stop();
+        }
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        Log.d(TAG, "onStop: Activity hidden");
+    }
+
+    @Override
+    protected void onRestart() {
+        super.onRestart();
+        Log.d(TAG, "onRestart: Activity restarting");
+    }
+
+    @Override
+    protected void onDestroy() {
+        Log.d(TAG, "onDestroy: Cleanup resources");
+        if (tts != null) {
+            tts.stop();
+            tts.shutdown();
+        }
+        if (countDownTimer != null) {
+            countDownTimer.cancel();
+        }
+        super.onDestroy();
+    }
+
+    // --------------------------------------------------------------------------
+    // SETUP & INITIALIZATION
+    // --------------------------------------------------------------------------
 
     private void initViews() {
         stepCounterTextView = findViewById(R.id.stepCounterTextView);
@@ -68,74 +125,108 @@ public class CookingModeActivity extends AppCompatActivity {
         prevButton = findViewById(R.id.prevButton);
         pauseButton = findViewById(R.id.pauseButton);
         micButton = findViewById(R.id.micButton);
+        backButton = findViewById(R.id.backButton);
     }
 
-    private void loadRecipeFromBackend() {
-        String postID = getIntent().getStringExtra("postID");
-        if (postID == null) {
-            Toast.makeText(this, "Thiếu ID bài viết", Toast.LENGTH_SHORT).show();
-            return;
-        }
+    private void setupEvents() {
+        pauseButton.setOnClickListener(v -> toggleTimer());
+        nextButton.setOnClickListener(v -> showNextStep());
+        prevButton.setOnClickListener(v -> showPrevStep());
+        micButton.setOnClickListener(v -> startVoiceControl());
+    }
 
-        // Gọi API Service thông qua Singleton getInstance(this)
-        ApiService api = RetrofitClient.getInstance(this).getApiService();
-        Call<RecipeResponse> call = api.getRecipeByPostID(postID);
+    private void setupBackNavigation() {
+        Runnable showDialogAction = this::showExitConfirmationDialog;
 
-        call.enqueue(new Callback<RecipeResponse>() {
+        // UI Back Button
+        backButton.setOnClickListener(v -> showDialogAction.run());
+
+        // System Back Gesture/Button
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override
-            public void onResponse(Call<RecipeResponse> call, Response<RecipeResponse> response) {
-                // Kiểm tra response thành công và có dữ liệu
-                if (!response.isSuccessful() || response.body() == null || !response.body().success) {
-                    Toast.makeText(CookingModeActivity.this, "Không tải được dữ liệu recipe", Toast.LENGTH_SHORT).show();
-                    return;
-                }
-
-                // [SỬA ĐỔI] Dùng Getter để lấy dữ liệu từ RecipeResponse mới
-                RecipeResponse.Recipe recipe = response.body().getRecipe();
-
-                if (recipe != null) {
-                    steps = recipe.getGuide(); // Dùng getGuide()
-
-                    if (steps == null || steps.isEmpty()) {
-                        instructionTextView.setText("Chưa có hướng dẫn cho món này.");
-                    } else {
-                        showStep(currentStep);
-                    }
-
-                    // Xử lý thời gian (Dùng getTime())
-                    String totalTime = recipe.getTime();
-                    if (totalTime != null && !totalTime.isEmpty()) {
-                        startTimer(parseMinutes(totalTime) * 60 * 1000L);
-                    } else {
-                        // Mặc định 15 phút nếu server không trả về time
-                        startTimer(15 * 60 * 1000L);
-                    }
-                }
-            }
-
-            @Override
-            public void onFailure(Call<RecipeResponse> call, Throwable t) {
-                Toast.makeText(CookingModeActivity.this, "Lỗi kết nối server", Toast.LENGTH_SHORT).show();
+            public void handleOnBackPressed() {
+                showDialogAction.run();
             }
         });
     }
 
+    private void setupTTS() {
+        tts = new TextToSpeech(this, status -> {
+            if (status == TextToSpeech.SUCCESS) {
+                int result = tts.setLanguage(new Locale("vi", "VN"));
+                if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
+                    Log.e(TAG, "TTS: Language not supported");
+                }
+            } else {
+                Log.e(TAG, "TTS: Initialization failed");
+            }
+        });
+    }
+
+    // --------------------------------------------------------------------------
+    // BUSINESS LOGIC: DATA LOADING
+    // --------------------------------------------------------------------------
+
+    private void loadRecipeFromBackend() {
+        String postID = getIntent().getStringExtra("postID");
+        if (postID == null) {
+            Log.e(TAG, "loadRecipe: Missing PostID");
+            return;
+        }
+
+        ApiService api = RetrofitClient.getInstance(this).getApiService();
+        api.getRecipeByPostID(postID).enqueue(new Callback<RecipeResponse>() {
+            @Override
+            public void onResponse(Call<RecipeResponse> call, Response<RecipeResponse> response) {
+                if (!response.isSuccessful() || response.body() == null || !response.body().success) {
+                    Log.e(TAG, "loadRecipe: Failed to load data");
+                    return;
+                }
+                setupRecipeData(response.body().getRecipe());
+            }
+
+            @Override
+            public void onFailure(Call<RecipeResponse> call, Throwable t) {
+                Log.e(TAG, "loadRecipe: Network error", t);
+                Toast.makeText(CookingModeActivity.this, "Lỗi kết nối", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void setupRecipeData(RecipeResponse.Recipe recipe) {
+        if (recipe == null) return;
+
+        steps = recipe.getGuide();
+        if (steps != null && !steps.isEmpty()) {
+            showStep(currentStep);
+        } else {
+            instructionTextView.setText("Chưa có hướng dẫn.");
+        }
+
+        String totalTime = recipe.getTime();
+        long duration = (totalTime != null && !totalTime.isEmpty())
+                ? parseMinutes(totalTime) * 60 * 1000L
+                : 15 * 60 * 1000L;
+
+        startTimer(duration);
+    }
+
+    // --------------------------------------------------------------------------
+    // BUSINESS LOGIC: TIMER & NAVIGATION
+    // --------------------------------------------------------------------------
+
     private int parseMinutes(String timeText) {
         try {
-            // Lấy tất cả các chữ số trong chuỗi (VD: "45 mins" -> "45")
             return Integer.parseInt(timeText.replaceAll("\\D+", ""));
         } catch (Exception e) {
-            return 10; // Mặc định 10 phút nếu lỗi parse
+            return 10;
         }
     }
 
     private void startTimer(long durationMs) {
+        if (countDownTimer != null) countDownTimer.cancel();
+
         timeRemaining = durationMs;
-
-        if (countDownTimer != null) {
-            countDownTimer.cancel();
-        }
-
         countDownTimer = new CountDownTimer(timeRemaining, 1000) {
             @Override
             public void onTick(long millisUntilFinished) {
@@ -146,24 +237,20 @@ public class CookingModeActivity extends AppCompatActivity {
             @Override
             public void onFinish() {
                 timerTextView.setText("Hoàn thành!");
-
-                // Chuyển sang màn hình kết thúc (nếu có)
-                // Intent intent = new Intent(CookingModeActivity.this, CookingEndActivity.class);
-                // startActivity(intent);
-                // finish();
+                isTimerRunning = false;
             }
         };
 
         countDownTimer.start();
         isTimerRunning = true;
-        pauseButton.setImageResource(R.drawable.ic_pause_white); // Đổi icon sang Pause
+        pauseButton.setImageResource(R.drawable.ic_pause_white);
     }
 
     private void toggleTimer() {
         if (isTimerRunning) {
             countDownTimer.cancel();
             isTimerRunning = false;
-            pauseButton.setImageResource(R.drawable.ic_play_white); // Đổi icon sang Play (cần icon này trong drawable)
+            pauseButton.setImageResource(R.drawable.ic_play_white);
         } else {
             startTimer(timeRemaining);
         }
@@ -178,12 +265,8 @@ public class CookingModeActivity extends AppCompatActivity {
     private void showStep(int index) {
         if (steps == null || steps.isEmpty()) return;
 
-        // [SỬA ĐỔI] Dùng Getter cho Step
         RecipeResponse.Step step = steps.get(index);
-
-        stepCounterTextView.setText("Bước " + (index + 1) + " trên " + steps.size());
-
-        // step.getStep() trả về int, cần convert sang String
+        stepCounterTextView.setText(String.format("Bước %d trên %d", index + 1, steps.size()));
         stepNumberTextView.setText(String.valueOf(step.getStep()));
         instructionTextView.setText(step.getContent());
 
@@ -191,11 +274,12 @@ public class CookingModeActivity extends AppCompatActivity {
     }
 
     private void showNextStep() {
-        if (steps != null && currentStep < steps.size() - 1) {
+        if (steps == null) return;
+        if (currentStep < steps.size() - 1) {
             currentStep++;
             showStep(currentStep);
         } else {
-            Toast.makeText(this, "Đã là bước cuối cùng", Toast.LENGTH_SHORT).show();
+            navigateToFinish();
         }
     }
 
@@ -206,85 +290,78 @@ public class CookingModeActivity extends AppCompatActivity {
         }
     }
 
-    private void setupTTS() {
-        tts = new TextToSpeech(this, status -> {
-            if (status == TextToSpeech.SUCCESS) {
-                int result = tts.setLanguage(new Locale("vi", "VN"));
-                if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
-                    Toast.makeText(this, "Ngôn ngữ tiếng Việt không được hỗ trợ", Toast.LENGTH_SHORT).show();
-                }
-            } else {
-                Toast.makeText(this, "Khởi tạo giọng nói thất bại", Toast.LENGTH_SHORT).show();
-            }
-        });
+    private void navigateToFinish() {
+        Log.d(TAG, "Navigating to Finish Screen");
+
+        Intent intent = new Intent(this, CookingEndActivity.class);
+        intent.putExtra("postID", getIntent().getStringExtra("postID"));
+        startActivity(intent);
+        finish(); // onDestroy will be called
     }
+
+    private void showExitConfirmationDialog() {
+        boolean wasRunning = isTimerRunning;
+        if (isTimerRunning) toggleTimer();
+
+        new AlertDialog.Builder(this)
+                .setTitle("Dừng nấu ăn?")
+                .setMessage("Tiến trình sẽ bị hủy. Bạn muốn rời khỏi không?")
+                .setPositiveButton("Rời khỏi", (dialog, which) -> {
+                    Log.d(TAG, "User chose to Exit");
+                    finish();
+                })
+                .setNegativeButton("Ở lại", (dialog, which) -> {
+                    dialog.dismiss();
+                    if (wasRunning) toggleTimer();
+                })
+                .setCancelable(false)
+                .show();
+    }
+
+    // --------------------------------------------------------------------------
+    // VOICE CONTROL
+    // --------------------------------------------------------------------------
 
     private void speakCurrentInstruction() {
-        if (instructionTextView.getText() != null) {
-            String text = instructionTextView.getText().toString();
-            tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, null);
+        if (instructionTextView.getText() != null && tts != null) {
+            tts.speak(instructionTextView.getText().toString(), TextToSpeech.QUEUE_FLUSH, null, null);
         }
     }
-
-    // -------------------------------
-    // 🔊 VOICE CONTROL
-    // -------------------------------
 
     private void startVoiceControl() {
         Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
         intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
         intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "vi-VN");
-        intent.putExtra(RecognizerIntent.EXTRA_PROMPT, "Hãy nói: tiếp / lùi / tạm dừng");
+        intent.putExtra(RecognizerIntent.EXTRA_PROMPT, "Lệnh: Tiếp / Lùi / Dừng / Hoàn thành");
 
         try {
             startActivityForResult(intent, VOICE_RECOGNITION_CODE);
         } catch (Exception e) {
-            Toast.makeText(this, "Thiết bị không hỗ trợ nhận dạng giọng nói", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Không hỗ trợ giọng nói", Toast.LENGTH_SHORT).show();
         }
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-
-        if (requestCode == VOICE_RECOGNITION_CODE &&
-                resultCode == Activity.RESULT_OK && data != null) {
-
-            ArrayList<String> results =
-                    data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
-
+        if (requestCode == VOICE_RECOGNITION_CODE && resultCode == Activity.RESULT_OK && data != null) {
+            ArrayList<String> results = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
             if (results == null || results.isEmpty()) return;
 
             String command = results.get(0).toLowerCase();
+            Log.d(TAG, "Voice Command: " + command);
 
-            // Xử lý lệnh giọng nói
             if (command.contains("tiếp") || command.contains("next")) {
                 showNextStep();
-            }
-            else if (command.contains("lùi") || command.contains("quay lại") || command.contains("trước")) {
+            } else if (command.contains("lùi") || command.contains("trước") || command.contains("quay lại")) {
                 showPrevStep();
-            }
-            else if (command.contains("dừng") || command.contains("pause")) {
+            } else if (command.contains("dừng") || command.contains("pause")) {
                 if (isTimerRunning) toggleTimer();
-            }
-            else if (command.contains("chạy") || command.contains("bắt đầu") || command.contains("tiếp tục")) {
+            } else if (command.contains("chạy") || command.contains("tiếp tục")) {
                 if (!isTimerRunning) toggleTimer();
+            } else if (command.contains("hoàn thành") || command.contains("xong")) {
+                navigateToFinish();
             }
-            else {
-                Toast.makeText(this, "Không hiểu lệnh: " + command, Toast.LENGTH_SHORT).show();
-            }
         }
-    }
-
-    @Override
-    protected void onDestroy() {
-        if (tts != null) {
-            tts.stop();
-            tts.shutdown();
-        }
-        if (countDownTimer != null) {
-            countDownTimer.cancel();
-        }
-        super.onDestroy();
     }
 }

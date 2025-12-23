@@ -11,16 +11,13 @@ public class RecipeResponse {
     @SerializedName("message")
     public String message;
 
-    @SerializedName("recipe") // Có thể là "data" tùy server
+    @SerializedName("recipe")
     public Recipe recipe;
 
     public Recipe getRecipe() {
         return recipe;
     }
 
-    // ==========================================
-    // CLASS: RECIPE (Đã thêm implement Serializable)
-    // ==========================================
     public static class Recipe implements Serializable {
         @SerializedName("_id")
         private String _id;
@@ -43,6 +40,10 @@ public class RecipeResponse {
         @SerializedName("caption")
         private String caption;
 
+        // --- THÊM TRƯỜNG THUMBNAIL ---
+        @SerializedName("thumbnail")
+        private String thumbnail;
+
         @SerializedName("media")
         private List<String> media;
 
@@ -63,25 +64,24 @@ public class RecipeResponse {
         public int getRation() { return ration; }
         public String getTime() { return time; }
         public String getCaption() { return caption; }
+
+        // Getter cho thumbnail
+        public String getThumbnail() { return thumbnail; }
+
         public List<String> getMedia() { return media; }
         public Ingredients getIngre() { return ingre; }
         public List<Step> getGuide() { return guide; }
         public List<String> getTags() { return tags; }
     }
 
-    // ==========================================
-    // CLASS: INGREDIENTS
-    // ==========================================
+    // ... (Giữ nguyên các class Ingredients, Ingredient, Step bên dưới) ...
     public static class Ingredients implements Serializable {
         @SerializedName("base")
         private List<Ingredient> base;
-
         @SerializedName("comple")
         private List<Ingredient> comple;
-
         @SerializedName("spice")
         private List<Ingredient> spice;
-
         @SerializedName("other")
         private List<Ingredient> other;
 
@@ -91,13 +91,9 @@ public class RecipeResponse {
         public List<Ingredient> getOther() { return other; }
     }
 
-    // ==========================================
-    // CLASS: INGREDIENT ITEM
-    // ==========================================
     public static class Ingredient implements Serializable {
         @SerializedName("quantity")
         private String quantity;
-
         @SerializedName("name")
         private String name;
 
@@ -105,16 +101,11 @@ public class RecipeResponse {
         public String getName() { return name; }
     }
 
-    // ==========================================
-    // CLASS: STEP
-    // ==========================================
     public static class Step implements Serializable {
         @SerializedName("step")
         private int step;
-
         @SerializedName("content")
         private String content;
-
         @SerializedName("media")
         private List<String> media;
 
