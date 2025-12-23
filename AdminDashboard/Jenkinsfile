@@ -1,0 +1,142 @@
+pipeline {
+    agent any
+ 
+
+    tools {
+        nodejs 'nodejs' 
+    }
+    
+    environment {
+        DOCKER_REGISTRY = "catarena" 
+        KUBE_NAMESPACE = "default" 
+        
+        // Cấu hình đường dẫn
+        SERVICE_PATH = "AdminDashboard/"    
+        
+        // Cấu hình Google Cloud
+        GCP_PROJECT_ID = "mobile-project-477308"
+        GCP_CLUSTER_NAME = "mobile-cluster"
+        GCP_ZONE = "asia-southeast1-a"
+        
+        // ❌ ĐÃ XÓA COMMIT_HASH VÀ IMAGE_TAGGED Ở ĐÂY ĐỂ TRÁNH LỖI NULL
+    }
+
+    stages { 
+        stage('Init & Checkout') {
+            steps {
+                checkout scm
+                script {
+                    // 👇 Lấy Commit Hash
+                    def shortCommit = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
+                    
+                    // Gán vào biến môi trường env để các stage sau dùng được
+                    env.COMMIT_HASH = shortCommit
+                    env.IMAGE_TAGGED = "${DOCKER_REGISTRY}/${params.SERVICE_NAME}:${shortCommit}"
+                    
+                    echo "🔖 Current Commit Hash: ${env.COMMIT_HASH}"
+                    echo "📦 Docker Image will be: ${env.IMAGE_TAGGED}"
+                    
+                    // Kiểm tra nếu biến vẫn null thì báo lỗi ngay lập tức
+                    if (!env.COMMIT_HASH || env.COMMIT_HASH == "null") {
+                        error "❌ Không lấy được Git Commit Hash. Kiểm tra lại lệnh git."
+                    }
+                }
+            }
+        }
+        
+        stage('Run Pipeline') { 
+            stages { 
+                stage('Scan Dependencies') {
+                    steps {
+                        script {
+                            if (fileExists(env.SERVICE_PATH)) {
+                                dir(env.SERVICE_PATH) { 
+                                    sh "npm install"
+                                    sh "npm audit --audit-level=high || true" 
+                                }
+                            } else {
+                                error "❌ Folder not found: ${env.SERVICE_PATH}"
+                            }
+                        }
+                    }
+                }
+                
+                stage('Build & Push Docker') {
+                    steps {
+                        script {
+                            echo "🐳 Building Docker Image: ${env.IMAGE_TAGGED}"
+                            
+                            // Build với tag là Commit Hash
+                            sh "docker build -t ${env.IMAGE_TAGGED} ./${env.SERVICE_PATH}"
+                            
+                            withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
+                                sh 'echo ${PASS} | docker login -u ${USER} --password-stdin'
+                                echo "🚀 Pushing image..."
+                                sh "docker push ${env.IMAGE_TAGGED}"
+                            }
+                        }
+                    }
+                }
+
+                stage('Deploy to K8s') {
+                    agent {
+                        docker {
+                            image 'catarena/gcloud-agent:latest'
+                        }
+                    }
+                    steps {
+                        withCredentials([file(credentialsId: 'k8s-mobile-cluster', variable: 'GCP_KEY_FILE')]) {
+                            script {
+                                echo "=== DEPLOYING VERSION: ${env.COMMIT_HASH} ==="
+                                
+                                // 1. Auth GCP
+                                sh 'gcloud auth activate-service-account --key-file=$GCP_KEY_FILE'
+                                sh "gcloud container clusters get-credentials ${env.GCP_CLUSTER_NAME} --zone ${env.GCP_ZONE} --project ${env.GCP_PROJECT_ID}"
+                                
+                                def yamlFile = "BackEnd/k8s-deployment/${params.SERVICE_NAME}.yaml"
+                                def deploymentName = "${params.SERVICE_NAME}"
+                                // ⚠️ Tên Container trong file YAML (thường đặt trùng tên service)
+                                def containerName = "${params.SERVICE_NAME}" 
+
+                                if (fileExists(yamlFile)) {
+                                    try {
+                                        // 2. APPLY CẤU HÌNH
+                                        sh "kubectl apply -f ${yamlFile} --namespace ${env.KUBE_NAMESPACE}"
+                                        
+                                        // 3. SET IMAGE (Cập nhật image mới)
+                                        echo "🔄 Updating Deployment to use image: ${env.IMAGE_TAGGED}"
+                                        sh "kubectl set image deployment/${deploymentName} ${containerName}=${env.IMAGE_TAGGED} --namespace ${env.KUBE_NAMESPACE}"
+                                        
+                                        // 4. VERIFY
+                                        echo "⏳ Waiting for rollout..."
+                                        sh "kubectl rollout status deployment/${deploymentName} --namespace ${env.KUBE_NAMESPACE} --timeout=2m"
+                                        
+                                        echo "✅ Deploy SUCCESS! Version: ${env.COMMIT_HASH}"
+
+                                    } catch (e) {
+                                        echo "❌ Deployment FAILED: ${e.message}"
+                                        currentBuild.result = 'FAILURE'
+                                        error("Deploy failed")
+                                    }
+                                } else {
+                                    error "❌ YAML File not found: ${yamlFile}"
+                                }
+                            }
+                        }   
+                    }
+                }
+            } 
+        } 
+    }
+    post {
+        always {
+            script {
+                echo "🧹 Cleaning up..."
+                // Chỉ xóa nếu biến IMAGE_TAGGED có giá trị
+                if (env.IMAGE_TAGGED) {
+                    sh "docker rmi ${env.IMAGE_TAGGED} || true"
+                }
+            }
+        }
+    }
+}
