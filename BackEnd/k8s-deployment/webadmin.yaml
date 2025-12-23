@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: webadmin-deployment
+  name: webadmin
 spec:
   replicas: 1 # Số lượng Pod chạy (có thể tăng lên 2 để dự phòng)
   selector:
