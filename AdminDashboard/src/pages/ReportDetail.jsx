@@ -70,7 +70,7 @@ const ReportDetail = () => {
 
         try {
             const payload = {
-                userID: report._id,
+                userID: report.reportedUser,
                 target: report.target,
                 type: report.type,
                 action: violationType,

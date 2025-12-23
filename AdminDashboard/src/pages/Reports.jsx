@@ -58,7 +58,7 @@ const Reports = () => {
 
         try {
             const payload = {
-                userID: selectedReport._id,
+                userID: selectedReport.reportedUser,
                 target: selectedReport.target,
                 type: selectedReport.type, // user, post, comment
                 action: violationType, // warn, ban
