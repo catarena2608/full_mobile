@@ -114,20 +114,4 @@ pipeline {
         } 
     }
 
-    post {
-        always {
-            script {
-                echo "🧹 Cleaning up local Docker images..."
-                if (env.IMAGE_TAGGED) {
-                    sh "docker rmi ${env.IMAGE_TAGGED} || true"
-                }
-            }
-        }
-        success {
-            echo "🎉 Pipeline finished successfully!"
-        }
-        failure {
-            echo "🚨 Pipeline failed. Please check the logs above."
-        }
-    }
 }
