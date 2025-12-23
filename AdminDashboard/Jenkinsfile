@@ -55,7 +55,7 @@ pipeline {
                             echo "🐳 Building Docker Image: ${env.IMAGE_TAGGED}"
                             
                             // Build image từ thư mục AdminDashboard
-                            sh "docker build -t ${env.IMAGE_TAGGED} ./${env.SERVICE_PATH}"
+                            sh "docker build --no-cache -t ${env.IMAGE_TAGGED} ./${env.SERVICE_PATH}"
                             
                             withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
                                 sh "echo ${PASS} | docker login -u ${USER} --password-stdin"

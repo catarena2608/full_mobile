@@ -15,7 +15,7 @@ spec:
       containers:
         - name: webadmin
           # ⚠️ LƯU Ý: Thay đổi 'catarena/frontend_react:latest' thành tên image thực tế của bạn
-          image: catarena/webadmin:latest
+          image: catarena/webadmin:v7
           imagePullPolicy: Always # Luôn kéo image mới nhất khi restart
           ports:
             - containerPort: 80 # Nginx trong container lắng nghe port 80
