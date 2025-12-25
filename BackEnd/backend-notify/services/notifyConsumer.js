@@ -9,34 +9,39 @@ const {
   emitToUser
 } = require("../sockets/socket");
 
+
 async function startNotifyConsumer() {
-  let channel = getChannel(process.env.RABBITMQ_NOTIFY_QUEUE);
-  while (!channel) { // chờ channel sẵn sàng
-    console.log("⏳ Waiting for RabbitMQ channel...");
+  const queueName = process.env.RABBITMQ_NOTIFY_QUEUE || "notification_queue";
+  
+  let channel = getChannel(queueName); // ✅ Dùng biến queueName
+  let retries = 0;
+  
+  while (!channel && retries < 30) {
+    console.log(`⏳ Waiting for RabbitMQ channel [${queueName}]... (${retries + 1}/30)`);
     await new Promise(res => setTimeout(res, 1000));
-    channel = getChannel(process.env.RABBITMQ_NOTIFY_QUEUE);
+    channel = getChannel(queueName);
+    retries++;
   }
 
-  const queueName = process.env.RABBITMQ_NOTIFY_QUEUE || "notification_queue";
-  await channel.assertQueue(queueName, {
-    durable: true
-  });
+  if (!channel) {
+    console.error(`❌ Failed to get channel for ${queueName} after 30 retries`);
+    setTimeout(startNotifyConsumer, 5000);
+    return;
+  }
 
-  console.log("🐰 Notification Consumer waiting for messages...");
+  console.log(`✅ Got channel for queue: ${queueName}`);
+
+  await channel.assertQueue(queueName, { durable: true });
+  console.log(`🐰 Notification Consumer listening on: ${queueName}`);
 
   channel.consume(queueName, async (msg) => {
     if (!msg) return;
 
     try {
       const data = JSON.parse(msg.content.toString());
-      console.log("Received event:", data);
+      console.log("📩 Received event:", data);
 
-      const {
-        actorId,
-        type,
-        targetId,
-        userID
-      } = data;
+      const { actorId, type, targetId, userID } = data;
 
       // ⚡ NEW_POST handling
       if (type === "new_post") {
@@ -191,6 +196,7 @@ async function startNotifyConsumer() {
       // 🔹 Nếu type khác
       channel.ack(msg);
 
+      
     } catch (err) {
       console.error("❌ Error processing notification:", err);
       channel.ack(msg);
