@@ -8,7 +8,7 @@ import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
-import android.widget.PopupMenu; // [MỚI]
+import android.widget.PopupMenu;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -17,6 +17,8 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
+
+import org.json.JSONObject; // [MỚI] Thêm thư viện để parse JSON lỗi
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -29,7 +31,7 @@ import course.examples.nt118.databinding.ActivityPostDetailBinding;
 import course.examples.nt118.model.Comment;
 import course.examples.nt118.model.CommentListResponse;
 import course.examples.nt118.model.CommentResponse;
-import course.examples.nt118.model.PostsResponse; // [MỚI] Dùng cho response xóa post
+import course.examples.nt118.model.PostsResponse;
 import course.examples.nt118.network.ApiService;
 import course.examples.nt118.network.RetrofitClient;
 import course.examples.nt118.utils.TokenManager;
@@ -119,7 +121,7 @@ public class PostDetailActivity extends AppCompatActivity {
             binding.includedPostContent.layoutUserInfo.setOnClickListener(authorProfileClick);
         }
 
-        // [MỚI] GẮN SỰ KIỆN CHO NÚT MORE (3 CHẤM)
+        // GẮN SỰ KIỆN CHO NÚT MORE (3 CHẤM)
         if (binding.includedPostContent.btnMore != null) {
             binding.includedPostContent.btnMore.setOnClickListener(v -> showMoreMenu(v));
         }
@@ -139,7 +141,7 @@ public class PostDetailActivity extends AppCompatActivity {
 
             @Override
             public void onReportClick(Comment comment) {
-                showReportCommentDialog(comment); // Đổi tên hàm để tránh nhầm lẫn
+                showReportCommentDialog(comment);
             }
         });
 
@@ -164,7 +166,7 @@ public class PostDetailActivity extends AppCompatActivity {
     }
 
     // ==================================================================
-    // [MỚI] LOGIC MENU MORE (DELETE / REPORT POST)
+    // LOGIC MENU MORE (DELETE / REPORT POST)
     // ==================================================================
 
     private void showMoreMenu(View view) {
@@ -343,7 +345,7 @@ public class PostDetailActivity extends AppCompatActivity {
     }
 
     // ==================================================================
-    // 4. SEND COMMENT & REPLY
+    // 4. SEND COMMENT & REPLY (ĐÃ CẬP NHẬT LOGIC LỖI 403)
     // ==================================================================
 
     private void handleSendComment() {
@@ -370,8 +372,21 @@ public class PostDetailActivity extends AppCompatActivity {
                     nextCursor = null;
                     isLastPage = false;
                     fetchComments();
+
+                } else if (response.code() == 403) {
+                    // [MỚI] Xử lý trường hợp bị server cấm (403 Forbidden)
+                    try {
+                        String errorBody = response.errorBody().string();
+                        JSONObject jsonObject = new JSONObject(errorBody);
+                        String message = jsonObject.optString("message", "Bạn đang bị cấm bình luận");
+                        Toast.makeText(PostDetailActivity.this, message, Toast.LENGTH_LONG).show();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        Toast.makeText(PostDetailActivity.this, "Bạn không có quyền bình luận", Toast.LENGTH_SHORT).show();
+                    }
+
                 } else {
-                    Toast.makeText(PostDetailActivity.this, "Gửi thất bại", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(PostDetailActivity.this, "Gửi thất bại: " + response.code(), Toast.LENGTH_SHORT).show();
                 }
             }
 
@@ -544,7 +559,6 @@ public class PostDetailActivity extends AppCompatActivity {
     // 7. REPORT LOGIC FOR COMMENTS (BÁO CÁO BÌNH LUẬN)
     // ==================================================================
 
-    // Đổi tên để phân biệt với báo cáo bài viết
     private void showReportCommentDialog(Comment comment) {
         String[] reasons = {
                 "Nội dung spam",

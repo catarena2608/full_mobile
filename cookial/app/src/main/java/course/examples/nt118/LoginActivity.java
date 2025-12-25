@@ -11,10 +11,12 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import org.json.JSONObject; // [MỚI] Import để parse JSON lỗi
+
 import java.util.HashMap;
 import java.util.Map;
 
-import course.examples.nt118.db.UserDao; // Đã sửa thành UserDao
+import course.examples.nt118.db.UserDao;
 import course.examples.nt118.model.LoginResponse;
 import course.examples.nt118.model.UserResponse;
 import course.examples.nt118.network.ApiService;
@@ -40,8 +42,8 @@ public class LoginActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState); // Dòng này đầu tiên
-        Log.d(TAG, "4. onCreate");
+        super.onCreate(savedInstanceState);
+        Log.d(TAG, "1. onCreate");
 
         // [QUAN TRỌNG] Kiểm tra đăng nhập ngay tại đây
         String savedUserId = TokenManager.getUserId(this);
@@ -88,16 +90,10 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     @Override
-    protected void onRestart() {
-        super.onRestart();
-        Log.d(TAG, "6. onRestart");
-    }
-
-    @Override
     protected void onDestroy() {
         super.onDestroy();
         Log.d(TAG, "7. onDestroy");
-        // Đóng database nếu cần thiết (SQLiteOpenHelper thường tự quản lý)
+        // Đóng database nếu cần thiết
         if (userDao != null) {
             userDao.close();
         }
@@ -157,26 +153,42 @@ public class LoginActivity extends AppCompatActivity {
                 showLoading(false);
 
                 if (response.isSuccessful() && response.body() != null) {
+                    // === TRƯỜNG HỢP THÀNH CÔNG ===
                     UserResponse user = response.body().getUser();
                     if (user != null) {
                         Log.i(TAG, "API Login thành công. UserID: " + user.getId());
 
-                        // 1. Lưu UserID vào SharedPreferences (để duy trì phiên đăng nhập)
+                        // 1. Lưu UserID vào SharedPreferences
                         TokenManager.saveUserId(LoginActivity.this, user.getId());
-                        Log.d(TAG, "Đã lưu UserID vào TokenManager");
 
-                        // 2. [QUAN TRỌNG] Lưu toàn bộ thông tin User vào SQLite bằng UserDao
+                        // 2. Lưu toàn bộ thông tin User vào SQLite
                         userDao.saveUser(user);
-                        Log.d(TAG, "Đã lưu thông tin chi tiết User vào SQLite (UserDao)");
 
                         Toast.makeText(LoginActivity.this, "Đăng nhập thành công", Toast.LENGTH_SHORT).show();
                         navigateToHome(user.getId());
                     } else {
-                        Log.e(TAG, "API trả về 200 OK nhưng User object bị null");
                         Toast.makeText(LoginActivity.this, "Lỗi dữ liệu người dùng", Toast.LENGTH_SHORT).show();
                     }
+
+                } else if (response.code() == 403) {
+                    // === [MỚI] TRƯỜNG HỢP BỊ CẤM (BANNED) ===
+                    try {
+                        String errorBody = response.errorBody().string();
+                        JSONObject jsonObject = new JSONObject(errorBody);
+                        // Lấy tin nhắn từ server, nếu không có thì hiện mặc định
+                        String message = jsonObject.optString("message", "Bạn đã bị cấm đăng nhập");
+
+                        Log.w(TAG, "User banned: " + message);
+                        Toast.makeText(LoginActivity.this, message, Toast.LENGTH_LONG).show();
+
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        Toast.makeText(LoginActivity.this, "Tài khoản của bạn đã bị khóa", Toast.LENGTH_SHORT).show();
+                    }
+
                 } else {
-                    Log.e(TAG, "API Login thất bại. Code: " + response.code() + ", Message: " + response.message());
+                    // === CÁC LỖI KHÁC (401, 404, 500...) ===
+                    Log.e(TAG, "API Login thất bại. Code: " + response.code());
 
                     String msg = "Đăng nhập thất bại";
                     if (response.code() == 401) msg = "Sai email hoặc mật khẩu";
@@ -189,7 +201,7 @@ public class LoginActivity extends AppCompatActivity {
             @Override
             public void onFailure(Call<LoginResponse> call, Throwable t) {
                 showLoading(false);
-                Log.e(TAG, "Lỗi kết nối API (Network/Timeout): " + t.getMessage(), t);
+                Log.e(TAG, "Lỗi kết nối API: " + t.getMessage());
                 Toast.makeText(LoginActivity.this, "Lỗi kết nối server", Toast.LENGTH_SHORT).show();
             }
         });
@@ -199,7 +211,6 @@ public class LoginActivity extends AppCompatActivity {
         Intent intent = new Intent(LoginActivity.this, HomeActivity.class);
         intent.putExtra("USER_ID", userId);
         startActivity(intent);
-        Log.d(TAG, "Đóng LoginActivity (finish)");
         finish();
     }
 

@@ -24,6 +24,8 @@ import androidx.core.content.ContextCompat;
 
 import com.google.gson.Gson;
 
+import org.json.JSONObject; // [MỚI] Import để parse JSON lỗi
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -178,7 +180,7 @@ public class NewRecipePostActivity extends AppCompatActivity {
     }
 
     // ==================================================================
-    // 4. LUỒNG XỬ LÝ API (QUAN TRỌNG)
+    // 4. LUỒNG XỬ LÝ API (QUAN TRỌNG - ĐÃ CẬP NHẬT 403)
     // ==================================================================
 
     private void attemptUploadFlow() {
@@ -226,6 +228,12 @@ public class NewRecipePostActivity extends AppCompatActivity {
                                 progressDialog.dismiss();
                                 handleError("Lỗi: Server không trả về Post ID.");
                             }
+
+                        } else if (response.code() == 403) {
+                            // [MỚI] Xử lý lỗi 403 ở bước 1
+                            progressDialog.dismiss();
+                            handle403Error(response);
+
                         } else {
                             progressDialog.dismiss();
                             handleError("Lỗi tạo Post: " + response.code());
@@ -266,6 +274,11 @@ public class NewRecipePostActivity extends AppCompatActivity {
                     Toast.makeText(NewRecipePostActivity.this, "Đăng công thức thành công 🎉", Toast.LENGTH_LONG).show();
                     setResult(RESULT_OK);
                     finish();
+
+                } else if (response.code() == 403) {
+                    // [MỚI] Xử lý lỗi 403 ở bước 2
+                    handle403Error(response);
+
                 } else {
                     handleError("Lỗi lưu công thức: " + response.code());
                 }
@@ -282,6 +295,19 @@ public class NewRecipePostActivity extends AppCompatActivity {
     // ==================================================================
     // 5. HELPERS & UTILS
     // ==================================================================
+
+    // [MỚI] Hàm xử lý chung cho lỗi 403 để code gọn hơn
+    private void handle403Error(Response<UploadPostResponse> response) {
+        try {
+            String errorBody = response.errorBody().string();
+            JSONObject jsonObject = new JSONObject(errorBody);
+            String message = jsonObject.optString("message", "Bạn đang bị cấm đăng bài");
+            Toast.makeText(NewRecipePostActivity.this, message, Toast.LENGTH_LONG).show();
+        } catch (Exception e) {
+            e.printStackTrace();
+            handleError("Bạn không có quyền đăng bài");
+        }
+    }
 
     private String generateIngredientsJson() {
         Map<String, List<Map<String, String>>> root = new HashMap<>();

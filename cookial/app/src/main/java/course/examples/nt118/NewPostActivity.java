@@ -13,7 +13,7 @@ import android.text.TextWatcher;
 import android.util.Log;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.ImageView; // Import ImageView
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -24,6 +24,8 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import com.google.gson.Gson;
+
+import org.json.JSONObject; // [MỚI] Import để parse JSON lỗi
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -50,7 +52,7 @@ public class NewPostActivity extends AppCompatActivity {
     private static final int REQUEST_PERMISSION_CODE = 100;
 
     // --- UI Components ---
-    private ImageView btnBack; // [SỬA] Đổi thành ImageView
+    private ImageView btnBack;
     private Button btnPost;
     private Button btnTypeMoment, btnTypeRecipe;
     private TextView txtMediaUploadArea, txtCharCount;
@@ -114,9 +116,7 @@ public class NewPostActivity extends AppCompatActivity {
     // ==================================================================
 
     private void initViews() {
-        // [SỬA] Ánh xạ btnBack
         btnBack = findViewById(R.id.btn_back);
-
         btnPost = findViewById(R.id.btn_post);
         btnTypeMoment = findViewById(R.id.btn_type_moment);
         btnTypeRecipe = findViewById(R.id.btn_type_recipe);
@@ -224,7 +224,7 @@ public class NewPostActivity extends AppCompatActivity {
     }
 
     // ==================================================================
-    // 3. UPLOAD LOGIC
+    // 3. UPLOAD LOGIC (ĐÃ CẬP NHẬT XỬ LÝ LỖI 403)
     // ==================================================================
 
     private void performUpload() {
@@ -270,12 +270,28 @@ public class NewPostActivity extends AppCompatActivity {
                     @Override
                     public void onResponse(Call<UploadPostResponse> call, Response<UploadPostResponse> response) {
                         progressDialog.dismiss();
+
                         if (response.isSuccessful() && response.body() != null && response.body().isSuccess()) {
+                            // === THÀNH CÔNG ===
                             Log.i(TAG, "Upload Success!");
                             Toast.makeText(NewPostActivity.this, "Đăng bài thành công!", Toast.LENGTH_SHORT).show();
                             setResult(RESULT_OK);
                             finish();
+
+                        } else if (response.code() == 403) {
+                            // === [MỚI] BỊ CẤM (403 Forbidden) ===
+                            try {
+                                String errorBody = response.errorBody().string();
+                                JSONObject jsonObject = new JSONObject(errorBody);
+                                String message = jsonObject.optString("message", "Bạn đang bị cấm đăng bài");
+                                Toast.makeText(NewPostActivity.this, message, Toast.LENGTH_LONG).show();
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                                Toast.makeText(NewPostActivity.this, "Bạn không có quyền đăng bài", Toast.LENGTH_SHORT).show();
+                            }
+
                         } else {
+                            // === LỖI KHÁC ===
                             Log.e(TAG, "Upload Failed. Code: " + response.code());
                             String errorMsg = (response.body() != null) ? response.body().getMessage() : "Lỗi server";
                             Toast.makeText(NewPostActivity.this, errorMsg, Toast.LENGTH_SHORT).show();
