@@ -116,7 +116,7 @@ router.post("/", async (req, res) => {
     if (!result.expired) {
       return res.status(403).json({
         success: false,
-        message: "Bạn đang bị cấm đăng bài",
+        message: "Bạn đang bị cấm bình luận",
         expireAt: result.expireAt
       });
     }
