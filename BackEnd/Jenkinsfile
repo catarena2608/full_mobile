@@ -84,54 +84,6 @@ pipeline {
                         }
                     }
                 }
-
-                stage('Deploy to K8s') {
-                    agent {
-                        docker {
-                            image 'catarena/gcloud-agent:latest'
-                        }
-                    }
-                    steps {
-                        withCredentials([file(credentialsId: 'k8s-mobile-cluster', variable: 'GCP_KEY_FILE')]) {
-                            script {
-                                echo "=== DEPLOYING VERSION: ${env.COMMIT_HASH} ==="
-                                
-                                // 1. Auth GCP
-                                sh 'gcloud auth activate-service-account --key-file=$GCP_KEY_FILE'
-                                sh "gcloud container clusters get-credentials ${env.GCP_CLUSTER_NAME} --zone ${env.GCP_ZONE} --project ${env.GCP_PROJECT_ID}"
-                                
-                                def yamlFile = "BackEnd/k8s-deployment/${params.SERVICE_NAME}.yaml"
-                                def deploymentName = "${params.SERVICE_NAME}"
-                                // ⚠️ Tên Container trong file YAML (thường đặt trùng tên service)
-                                def containerName = "${params.SERVICE_NAME}" 
-
-                                if (fileExists(yamlFile)) {
-                                    try {
-                                        // 2. APPLY CẤU HÌNH
-                                        sh "kubectl apply -f ${yamlFile} --namespace ${env.KUBE_NAMESPACE}"
-                                        
-                                        // 3. SET IMAGE (Cập nhật image mới)
-                                        echo "🔄 Updating Deployment to use image: ${env.IMAGE_TAGGED}"
-                                        sh "kubectl set image deployment/${deploymentName} ${containerName}=${env.IMAGE_TAGGED} --namespace ${env.KUBE_NAMESPACE}"
-                                        
-                                        // 4. VERIFY
-                                        echo "⏳ Waiting for rollout..."
-                                        sh "kubectl rollout status deployment/${deploymentName} --namespace ${env.KUBE_NAMESPACE} --timeout=2m"
-                                        
-                                        echo "✅ Deploy SUCCESS! Version: ${env.COMMIT_HASH}"
-
-                                    } catch (e) {
-                                        echo "❌ Deployment FAILED: ${e.message}"
-                                        currentBuild.result = 'FAILURE'
-                                        error("Deploy failed")
-                                    }
-                                } else {
-                                    error "❌ YAML File not found: ${yamlFile}"
-                                }
-                            }
-                        }   
-                    }
-                }
             } 
         } 
     }

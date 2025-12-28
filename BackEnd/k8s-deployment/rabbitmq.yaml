@@ -1,4 +1,17 @@
 apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: rabbitmq-pv
+spec:
+  storageClassName: standard-rwo  # QUAN TRỌNG: Phải khớp với PVC của bạn
+  capacity:
+    storage: 10Gi                 # Phải lớn hơn hoặc bằng dung lượng PVC xin
+  accessModes:
+    - ReadWriteOnce
+  hostPath:                       # Dùng ổ cứng của chính Node để lưu
+    path: "/mnt/data/rabbitmq"    # Dữ liệu sẽ nằm ở đây trên Node
+---
+apiVersion: v1
 kind: Service
 metadata:
   name: rabbitmq # Tên này sẽ là hostname để các backend kết nối (vd: amqp://user:password@rabbitmq:5672)

@@ -29,10 +29,11 @@ kind: Service
 metadata:
   name: webadmin-service
 spec:
-  type: LoadBalancer # Yêu cầu Cloud Provider cấp IP PublicSSSS
+  type: NodePort # Yêu cầu Cloud Provider cấp IP PublicSSSS
   selector:
     app: webadmin # Phải trùng với label của Deployment ở trên
   ports:
     - protocol: TCP
       port: 80       # Port mở ra bên ngoài (External IP:80)
       targetPort: 80 # Port của container (Nginx)
+      nodePort: 30008

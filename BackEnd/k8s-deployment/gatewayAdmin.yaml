@@ -3,12 +3,13 @@ kind: Service
 metadata:
   name: api-gatewayadmin
 spec:
-  type: LoadBalancer
+  type: NodePort
   selector:
     app: api-gatewayadmin
   ports:
     - port: 80
       targetPort: 9000
+      nodePort: 30005
       name: http
 ---
 apiVersion: apps/v1
