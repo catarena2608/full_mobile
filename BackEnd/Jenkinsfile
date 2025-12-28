@@ -20,12 +20,13 @@ pipeline {
         // Cấu hình đường dẫn
         SERVICE_PATH = "BackEnd/${params.SERVICE_NAME}/" 
         
-        // Cấu hình Google Cloud
+        // 👇 THAY ĐỔI: Cố định tag là :latest ngay tại đây
+        IMAGE_TAGGED = "${DOCKER_REGISTRY}/${params.SERVICE_NAME}:latest"
+
+        // Cấu hình Google Cloud (Giữ nguyên nếu bạn dùng sau này)
         GCP_PROJECT_ID = "mobile-project-477308"
         GCP_CLUSTER_NAME = "mobile-cluster"
         GCP_ZONE = "asia-southeast1-a"
-        
-        // ❌ ĐÃ XÓA COMMIT_HASH VÀ IMAGE_TAGGED Ở ĐÂY ĐỂ TRÁNH LỖI NULL
     }
 
     stages { 
@@ -33,20 +34,8 @@ pipeline {
             steps {
                 checkout scm
                 script {
-                    // 👇 Lấy Commit Hash
-                    def shortCommit = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
-                    
-                    // Gán vào biến môi trường env để các stage sau dùng được
-                    env.COMMIT_HASH = shortCommit
-                    env.IMAGE_TAGGED = "${DOCKER_REGISTRY}/${params.SERVICE_NAME}:${shortCommit}"
-                    
-                    echo "🔖 Current Commit Hash: ${env.COMMIT_HASH}"
-                    echo "📦 Docker Image will be: ${env.IMAGE_TAGGED}"
-                    
-                    // Kiểm tra nếu biến vẫn null thì báo lỗi ngay lập tức
-                    if (!env.COMMIT_HASH || env.COMMIT_HASH == "null") {
-                        error "❌ Không lấy được Git Commit Hash. Kiểm tra lại lệnh git."
-                    }
+                    // In ra thông báo để kiểm tra
+                    echo "📦 Docker Image will be built as: ${env.IMAGE_TAGGED}"
                 }
             }
         }
@@ -73,7 +62,7 @@ pipeline {
                         script {
                             echo "🐳 Building Docker Image: ${env.IMAGE_TAGGED}"
                             
-                            // Build với tag là Commit Hash
+                            // Build với tag latest
                             sh "docker build -t ${env.IMAGE_TAGGED} ./${env.SERVICE_PATH}"
                             
                             withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
