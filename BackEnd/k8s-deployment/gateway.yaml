@@ -3,14 +3,12 @@ kind: Service
 metadata:
   name: api-gateway
 spec:
-  type: NodePort # Dùng NodePort để test local hoặc LoadBalancer nếu chạy cloud
+  type: ClusterIP # Dùng ClusterIP để test local hoặc LoadBalancer nếu chạy cloud
   selector:
     app: api-gateway
   ports:
     - port: 80         # <--- Đổi thành 80 cho chuẩn web (người dùng không cần gõ :3000)
       targetPort: 3000 # Container vẫn chạy port 3000
-      nodePort: 30006
-      name: http
 ---
 apiVersion: apps/v1
 kind: Deployment

@@ -3,14 +3,12 @@ kind: Service
 metadata:
   name: backend-notify
 spec:
-  type: NodePort  # <--- Thêm dòng này
+  type: ClusterIP  # <--- Thêm dòng này
   selector:
     app: backend-notify
   ports:
     - port: 6001
       targetPort: 6001
-      nodePort: 30007
-      name: tcp
 ---
 apiVersion: apps/v1
 kind: Deployment

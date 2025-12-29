@@ -1,0 +1,51 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: unified-api-gateway
+  annotations:
+    # 1. Tăng thời gian Timeout (Quan trọng cho WebSocket)
+    # Mặc định là 60s, nếu không tăng, kết nối sẽ bị ngắt sau 1 phút
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+
+    # 2. Cấu hình Sticky Session (BẮT BUỘC cho Socket.io chế độ default)
+    # Tạo một cookie để đánh dấu client đang kết nối vào Pod nào
+    nginx.ingress.kubernetes.io/affinity: "cookie"
+    nginx.ingress.kubernetes.io/session-cookie-name: "socket-sticky-id"
+    nginx.ingress.kubernetes.io/session-cookie-expires: "172800"
+    nginx.ingress.kubernetes.io/session-cookie-max-age: "172800"
+    
+    # Rewrite path (nếu cần thiết)
+    nginx.ingress.kubernetes.io/rewrite-target: /$1
+
+spec:
+  ingressClassName: nginx
+  rules:
+  - http:
+      paths:
+      # --- Route cho Socket.io ---
+      # Lưu ý: Client Socket.io mặc định gọi vào đường dẫn /socket.io/
+      - path: /socket.io/?(.*) 
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: backend-notify # Tên Service của bạn
+            port:
+              number: 6001 # Port mà app Nodejs đang chạy
+      
+      # --- Các Route cũ ---
+      - path: /stat/?(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: api-gatewayadmin
+            port:
+              number: 80
+              
+      - path: /api/?(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: api-gateway
+            port:
+              number: 80
