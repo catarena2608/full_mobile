@@ -31,7 +31,7 @@ public class SocketClient {
     private SocketClient() { }
 
     private String getSocketUrl() {
-        return "http://192.168.100.101:30007";
+        return "http://192.168.100.200";
     }
 
     public void connect(String jwtToken) {
