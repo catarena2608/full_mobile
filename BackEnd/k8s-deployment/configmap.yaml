@@ -43,3 +43,6 @@ data:
 
   #gateway
   GATEWAY_PORT: "3000"
+
+  #gateway-admin
+  GATEWAYADMIN_PORT: "9000"
