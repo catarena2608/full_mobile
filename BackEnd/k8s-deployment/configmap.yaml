@@ -1,0 +1,45 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mobile-configmap
+data:
+  #general
+  DEPLOY: production
+  MyJWT_SECRET: e3b0c44298fc1c149afbf4X9@2$k8G#d!0fLzP7qR3tM1xS5aNc8996fb92427ae41e4649b934ca495991b7852b855DayLaChuoiTuCheThoi
+  SMTP_USER: administrator@cookial.site
+  SMTP_PASS: Thodeptrai.1
+  RABBITMQ_URL: amqp://user:password@rabbitmq:5672
+  RABBITMQ_PREFETCH: "20"
+  RABBITMQ_NOTIFY_QUEUE: notification_queue
+  RABBITMQ_USER_QUEUE: user_followers_queue
+  RABBITMQ_USER_RESPONSE_QUEUE: user_response_queue
+  RABBITMQ_STATS_QUEUE: stats_queue
+  RABBITMQ_POSTVIO_QUEUE: violate_post_queue
+  RABBITMQ_VIOLATE_QUEUE: violate_queue
+  RABBITMQ_USERVIO_QUEUE: violate_user_queue
+
+  #backend-auth
+  AUTH_MONGO_URI: mongodb+srv://23521581_db_user:atlas23521581@myfirstcluster.ccfvyib.mongodb.net/userdb?retryWrites=true&w=majority&appName=MyFirstCluster
+
+  #backend-notify
+  NOTIFY_MONGO_URI: "mongodb+srv://23521581_db_user:atlas23521581@myfirstcluster.ccfvyib.mongodb.net/notifydb?retryWrites=true&w=majority&appName=MyFirstCluster"
+  NOTIFY_PORT: "6001"
+
+  #backend-post
+  POST_MONGO_URI: "mongodb+srv://23521581_db_user:atlas23521581@myfirstcluster.ccfvyib.mongodb.net/postdb?retryWrites=true&w=majority&appName=MyFirstCluster"
+  POST_PORT: "4001"
+
+  #backend-recipe
+  RECIPE_MONGO_URI: "mongodb+srv://23521581_db_user:atlas23521581@myfirstcluster.ccfvyib.mongodb.net/recipedb?retryWrites=true&w=majority&appName=MyFirstCluster"
+  RECIPE_PORT: "5001"
+
+  #backend-static
+  STATIC_MONGO_URI: "mongodb+srv://23521581_db_user:atlas23521581@myfirstcluster.ccfvyib.mongodb.net/statictisdb?retryWrites=true&w=majority&appName=MyFirstCluster"
+  STATIC_PORT: "7001"
+
+  #backend-user
+  USER_MONGO_URI: "mongodb+srv://23521581_db_user:atlas23521581@myfirstcluster.ccfvyib.mongodb.net/userdb?retryWrites=true&w=majority&appName=MyFirstCluster"
+  USER_PORT: "3002"
+
+  #gateway
+  GATEWAY_PORT: "3000"
